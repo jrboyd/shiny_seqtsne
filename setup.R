@@ -6,7 +6,8 @@ if(!exists("LOADED")){
     library(seqtsne)
     library(magrittr)
     library(GenomicRanges)
-    source("generate_data.R")
+    # source("generate_data.R")
+    source("generate_data_hESC_and_CD34_wide_biv.R")
     options(mc.cores = 16)
     message(getwd())
     
@@ -26,8 +27,11 @@ if(!exists("LOADED")){
     GLOBAL_VIEW_PROFILES_SLOW = "profiles (slow)"
     GLOBAL_VIEW_DENSITY = "density"
     
-    color_mapping = safeBrew(length(UI_MARKS))
-    names(color_mapping) = UI_MARKS
+    if(!exists("color_mapping")){
+        color_mapping = safeBrew(length(UI_MARKS))
+        names(color_mapping) = UI_MARKS    
+    }
+    
     
     mdt = prep_summary(profile_dt, tsne_dt, 12)
     glyph_df = GGally::glyphs(mdt, x_major = "bx", x_minor = "x", y_major = "by", y_minor = "y")

@@ -85,6 +85,45 @@ shinyUI(fluidPage(
                          )
     ), 
     tabPanel("Gene Table",
-             DT::dataTableOutput("tableGenes"))
+             sidebarLayout(
+                 sidebarPanel = sidebarPanel(),
+                 mainPanel = mainPanel(
+                     DT::dataTableOutput("tableGenes", width = "600px")
+                 )
+             )
     )
-))
+    ,
+    tabPanel("Gene Query",
+             textInput("textGeneQ", label = "Gene Query", value = "Runx1 Runx2"),
+             plotOutput("geneQPlot", width = "600px", height = "600px")
+    )
+    ),
+    sidebarLayout(
+        sidebarPanel(
+            fluidRow(
+                column(
+                    width = 4,
+                    checkboxGroupInput(
+                        "selCellsDetail",
+                        "Select Cells",
+                        choices = UI_CELLS,
+                        selected = UI_CELLS
+                    )
+                ),
+                column(
+                    width = 4,
+                    checkboxGroupInput(
+                        "selMarksDetail",
+                        "Select Marks",
+                        choices = UI_MARKS,
+                        selected = UI_MARKS
+                    )
+                )
+            )
+        ),
+        mainPanel(
+            plotOutput("detailPlot", width = "600px", height = "600px")
+        )
+    )
+)
+)

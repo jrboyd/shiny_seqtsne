@@ -11,31 +11,81 @@
 shinyServer(function(input, output) {
     output$globalPlot <- renderPlot({
         typ = input$globalViewType
-        point_size = .1
+        
         xrng = plot_zoom_xrng()
         yrng = plot_zoom_yrng()
+        frac_shown = max(c(diff(xrng), diff(yrng)))
+        point_size = .1 / frac_shown
+        
         if(typ == GLOBAL_VIEW_POINTS){
             if(length(input$selMarks) >= 1){
                 if(length(input$selMarks) == 2){
                     corr_dt = dcast(
                         agg_dt[cell %in% input$selCells & mark %in% input$selMarks], 
                         id+cell+tx+ty~mark, value.var = "value")
-                    corr_dt$diff = corr_dt[, 6] - corr_dt[,5]
-                    p = ggplot(corr_dt, aes(x = tx, y = ty, color = diff)) +
-                        geom_point(size = point_size) + 
-                        scale_color_gradientn(colors = c("blue", "white", "red"), 
-                                              breaks = c(-1, -.5, 0, .5, 1),
-                                              labels = c(colnames(corr_dt)[5], "", "-", "", colnames(corr_dt)[6]),
-                                              limits = c(-1, 1)) +
+                    corr_dt$difference = corr_dt[, 6] - corr_dt[,5]
+                    corr_dt$agreement = pmin(corr_dt[, 6], corr_dt[,5])
+                    # browser()
+                    
+                    
+                    val_dt = melt(corr_dt[, .(tx, ty, difference, agreement)],
+                                  id.vars = c("tx", "ty"),
+                                  measure.vars = c("difference", "agreement"))
+                    p = ggplot() +
+                        geom_point(data = val_dt[variable == "difference"],
+                                   aes(x = tx, y = ty, color = value),
+                                   size = point_size) +
+                        geom_point(
+                            data = val_dt[variable == "agreement"],
+                            aes(x = tx, y = ty, fill = value),
+                            size = point_size * 1.5,
+                            shape = 21,
+                            color = "#00000000"
+                        ) +
+                        scale_color_gradientn(
+                            colors = c("blue", "white", "red"),
+                            breaks = c(-1,-.5, 0, .5, 1),
+                            labels = c(colnames(corr_dt)[5], "", "-", "", colnames(corr_dt)[6]),
+                            limits = c(-1, 1)
+                        ) +
+                        scale_fill_gradientn(
+                            colors = c("gray80", "gray0"),
+                            breaks = c(0, .5, 1),
+                            labels = c(0, .5, 1),
+                            limits = c(0, 1)
+                        ) +
                         coord_cartesian(xlim = xrng, ylim = yrng) +
-                        labs(color = "difference")
+                        facet_wrap("variable") +
+                        labs(color = "difference",
+                             fill = paste("min of", colnames(corr_dt)[5],
+                                          "\nand", colnames(corr_dt)[6]))
+                    
+                    # browser()
+                    # p = ggplot(corr_dt, aes(x = tx, y = ty, color = diff)) +
+                    #     geom_point(size = point_size) + 
+                    #     scale_color_gradientn(colors = c("blue", "white", "red"), 
+                    #                           breaks = c(-1, -.5, 0, .5, 1),
+                    #                           labels = c(colnames(corr_dt)[5], "", "-", "", colnames(corr_dt)[6]),
+                    #                           limits = c(-1, 1)) +
+                    #     coord_cartesian(xlim = xrng, ylim = yrng) +
+                    #     labs(color = "difference")
+                    # 
+                    # ggplot(corr_dt, aes(x = tx, y = ty, color = agree)) +
+                    #     geom_point(size = point_size) + 
+                    #     scale_color_gradientn(colors = c("blue", "white", "red"), 
+                    #                           breaks = c(-1, -.5, 0, .5, 1),
+                    #                           labels = c(colnames(corr_dt)[5], "", "-", "", colnames(corr_dt)[6]),
+                    #                           limits = c(-1, 1)) +
+                    #     coord_cartesian(xlim = xrng, ylim = yrng) +
+                    #     labs(color = "difference")
                 }else{
+                    nc = ceiling(sqrt(length(input$selMarks)))
                     p = ggplot(
                         agg_dt[cell %in% input$selCells & mark %in% input$selMarks], 
                         aes(x = tx, y = ty, color = value)) +
                         geom_point(size = point_size) +  
                         coord_cartesian(xlim = xrng, ylim = yrng) +
-                        facet_wrap("mark")    
+                        facet_wrap("mark", ncol = nc)    
                 }
             }else{
                 p = ggplot(tsne_dt[cell %in% input$selCells], aes(x = tx, y = ty)) +
@@ -69,15 +119,7 @@ shinyServer(function(input, output) {
                                        line_color_mapping = color_mapping,
                                        plot_type = "raster")
         }
-        
-        # if(any(input$xrng != c(-.5, .5)) | any(input$yrng != c(-.5, .5))){
-        #     p = p + annotate("rect",
-        #                      xmin = min(input$xrng), xmax = max(input$xrng),
-        #                      ymin = min(input$yrng), ymax = max(input$yrng),
-        #                      fill = "#00FF0055", color = "black")
-        # }
         p +
-            # coord_fixed() + 
             theme_classic() + 
             labs(x = "", y = "")
         
@@ -239,8 +281,50 @@ shinyServer(function(input, output) {
         plot_zoom_yrng(c(-.5, .5))
     })
     
+    # observeEvent({
+    #     sel_zoom_xrng()
+    #     sel_zoom_yrng()
+    #     input$selMarks
+    #     input$selCells
+    # }, {
+    output$detailPlot = renderPlot({
+        n_detail = 5
+        xrng = sel_zoom_xrng()
+        yrng = sel_zoom_yrng()
+        samp_id = sampleCap(tsne_dt[tx >= min(xrng) & tx <= max(xrng) & ty >= min(yrng) & ty <= max(yrng), ]$id, n_detail)
+        qgr = query_gr[samp_id]
+        # prof_dt = profile_dt[id %in% samp_id & mark %in% input$selMarks & cell %in% input$selCells]
+        prof_dt = stsFetchTsneInput(config_dt[mark %in% input$selMarksDetail & 
+                                                  cell %in% input$selCellsDetail, 1:3], 
+                                    cap_value = Inf,
+                                    qgr = qgr, 
+                                    qwin = 100, 
+                                    skip_checks = TRUE)$bw_dt
+        ggplot(prof_dt, aes(x = x, y = y, color = mark, group = paste(id, cell, mark))) +
+            geom_path() +
+            scale_color_manual(values = color_mapping) + 
+            facet_grid("mark~id")
+    })
+        
+    # })
     
     output$tableGenes = DT::renderDT(expr = {
-        data.frame(a = 1:3, b = 4:6)
+        xrng = sel_zoom_xrng()
+        yrng = sel_zoom_yrng()
+        reg_id = tsne_dt[tx >= min(xrng) & tx <= max(xrng) & ty >= min(yrng) & ty <= max(yrng), ]$id
+        gene_dt = unique(annotation_dt[id %in% reg_id][distance < 1e6][order(distance)])
+        # browser()
+        DT::datatable(gene_dt, options = list(pageLength = 15), filter = "top")
+    }, server = TRUE)
+    
+    
+    output$geneQPlot = renderPlot({
+        max_dist = 3e4
+        gene_text = input$textGeneQ
+        gene_list = strsplit(toupper(gene_text), "[ ,]+")[[1]]
+        hit_id = unique(annotation_dt[gene_name %in% gene_list & distance <= max_dist]$id)
+        ggplot() + 
+            annotate("point", x =  tsne_dt$tx, y = tsne_dt$ty, size = .2, color = "gray") +
+            annotate("point", x =  tsne_dt[id %in% hit_id]$tx, y = tsne_dt[id %in% hit_id]$ty, size = .2, color = "red")
     })
 })
