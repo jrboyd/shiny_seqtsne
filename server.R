@@ -9,7 +9,75 @@
 
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
+    
+    UI_CELLS = reactiveVal(NULL)
+    UI_MARKS = reactiveVal(NULL)
+    
+    observeEvent({
+        input$selDataset
+    }, {
+        req_vars = c(
+            "profile_dt",
+            "tsne_dt",
+            "query_gr",
+            "agg_dt",
+            "overlap_dt",
+            "annotation_dt",
+            "config_dt",
+            "color_mapping"
+        )
+        hidden = sapply(req_vars, function(x)remove(x))
+        sel = input$selDataset
+        src = UI_DATASOURCES[sel]
+        browser()
+        res = load_dataset(src)
+        
+        sapply(req_vars, function(x)exists(x))
+    })
+    
+    output$ui_global_cells = renderUI({
+        req(UI_CELLS())
+        checkboxGroupInput(
+            "selCells",
+            "Select Cells",
+            choices = UI_CELLS(),
+            selected = UI_CELLS()
+        )
+    })
+    
+    output$ui_global_marks = renderUI({
+        req(UI_MARKS())
+        checkboxGroupInput(
+            "selMarks",
+            "Select Marks",
+            choices = UI_MARKS(),
+            selected = UI_MARKS()[1]
+        )
+    })
+    
+    output$ui_zoom_cells = renderUI({
+        req(UI_CELLS())
+        checkboxGroupInput(
+            "selCellsDetail",
+            "Select Cells",
+            choices = UI_CELLS(),
+            selected = UI_CELLS()
+        )
+    })
+    
+    output$ui_zoom_marks = renderUI({
+        req(UI_MARKS())
+        checkboxGroupInput(
+            "selMarksDetail",
+            "Select Marks",
+            choices = UI_MARKS(),
+            selected = UI_MARKS()
+        )
+    })
+    
     output$globalPlot <- renderPlot({
+        req(input$selCells)
+        req(input$selMarks)
         typ = input$globalViewType
         
         xrng = plot_zoom_xrng()
@@ -281,29 +349,40 @@ shinyServer(function(input, output) {
         plot_zoom_yrng(c(-.5, .5))
     })
     
-    # observeEvent({
-    #     sel_zoom_xrng()
-    #     sel_zoom_yrng()
-    #     input$selMarks
-    #     input$selCells
-    # }, {
-    output$detailPlot = renderPlot({
-        n_detail = 5
+    zoom_id = reactiveVal(NULL)
+    
+    observe({
         xrng = sel_zoom_xrng()
         yrng = sel_zoom_yrng()
-        samp_id = sampleCap(tsne_dt[tx >= min(xrng) & tx <= max(xrng) & ty >= min(yrng) & ty <= max(yrng), ]$id, n_detail)
+        samp_id = sampleCap(tsne_dt[tx >= min(xrng) & tx <= max(xrng) & ty >= min(yrng) & ty <= max(yrng), ]$id, 100)
+        zoom_id(samp_id)
+    })
+        
+    output$detailPlot = renderPlot({
+        req(input$n_detail)
+        req(input$selMarksDetail)
+        req(input$selCellsDetail)
+        n_detail = input$n_detail
+        samp_id = zoom_id()[seq(n_detail)]
         qgr = query_gr[samp_id]
         # prof_dt = profile_dt[id %in% samp_id & mark %in% input$selMarks & cell %in% input$selCells]
-        prof_dt = stsFetchTsneInput(config_dt[mark %in% input$selMarksDetail & 
-                                                  cell %in% input$selCellsDetail, 1:3], 
+        # browser()
+        qdt = config_dt[mark %in% input$selMarksDetail & 
+                            cell %in% input$selCellsDetail, ]
+        qdt$norm_factor = 1
+        prof_dt = stsFetchTsneInput(qdt, 
                                     cap_value = Inf,
                                     qgr = qgr, 
                                     qwin = 100, 
                                     skip_checks = TRUE)$bw_dt
+        prof_dt$id = factor(prof_dt$id, levels = samp_id)
         ggplot(prof_dt, aes(x = x, y = y, color = mark, group = paste(id, cell, mark))) +
             geom_path() +
             scale_color_manual(values = color_mapping) + 
-            facet_grid("mark~id")
+            facet_grid("cell~id") +
+            scale_x_continuous(breaks = 0) +
+            labs(x = "relative position", y = "fold-enrichment") +
+            theme(axis.text.x = element_blank())
     })
         
     # })

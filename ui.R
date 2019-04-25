@@ -12,7 +12,7 @@ source("setup.R")
 
 # Define UI for application that draws a histogram
 shinyUI(fluidPage(
-    
+    selectInput("selDataset", "Select Dataset", choices = UI_DATASETS),
     # Application title
     titlePanel("Runx1 bookmarking with seqtsne", windowTitle = "seqtsne"),
     
@@ -37,21 +37,23 @@ shinyUI(fluidPage(
                                      ),
                                      column(
                                          width = 4,
-                                         checkboxGroupInput(
-                                             "selCells",
-                                             "Select Cells",
-                                             choices = UI_CELLS,
-                                             selected = UI_CELLS
-                                         )
+                                         uiOutput("ui_global_cells")
+                                         # checkboxGroupInput(
+                                         #     "selCells",
+                                         #     "Select Cells",
+                                         #     choices = UI_CELLS,
+                                         #     selected = UI_CELLS
+                                         # )
                                      ),
                                      column(
                                          width = 4,
-                                         checkboxGroupInput(
-                                             "selMarks",
-                                             "Select Marks",
-                                             choices = UI_MARKS,
-                                             selected = UI_MARKS[1]
-                                         )
+                                         uiOutput("ui_global_marks")
+                                         # checkboxGroupInput(
+                                         #     "selMarks",
+                                         #     "Select Marks",
+                                         #     choices = UI_MARKS,
+                                         #     selected = UI_MARKS[1]
+                                         # )
                                      )
                                  ),
                                  
@@ -103,21 +105,27 @@ shinyUI(fluidPage(
             fluidRow(
                 column(
                     width = 4,
-                    checkboxGroupInput(
-                        "selCellsDetail",
-                        "Select Cells",
-                        choices = UI_CELLS,
-                        selected = UI_CELLS
-                    )
+                    uiOutput("ui_zoom_cells")
+                    # checkboxGroupInput(
+                    #     "selCellsDetail",
+                    #     "Select Cells",
+                    #     choices = UI_CELLS,
+                    #     selected = UI_CELLS
+                    # )
                 ),
                 column(
                     width = 4,
-                    checkboxGroupInput(
-                        "selMarksDetail",
-                        "Select Marks",
-                        choices = UI_MARKS,
-                        selected = UI_MARKS
-                    )
+                    uiOutput("ui_zoom_marks")
+                    # checkboxGroupInput(
+                    #     "selMarksDetail",
+                    #     "Select Marks",
+                    #     choices = UI_MARKS,
+                    #     selected = UI_MARKS
+                    # )
+                ),
+                column(
+                    width = 4,
+                    numericInput("n_detail", "Number of regions to plot", value = 5, min = 1, max = 20, step = 1)  
                 )
             )
         ),
