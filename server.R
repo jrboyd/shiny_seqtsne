@@ -10,48 +10,74 @@
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
     
+    showModal(modalDialog(    
+        selectInput("selDataset", "Select Dataset", choices = UI_DATASETS),
+        footer = tagList(
+            actionButton("btnLoadDataset", "Load")    
+        )
+    ))
+    
+    UI_TALLV = reactiveVal(NULL)
+    UI_WIDEV = reactiveVal(NULL)
     UI_CELLS = reactiveVal(NULL)
     UI_MARKS = reactiveVal(NULL)
+    UI_GENES = reactiveVal(NULL)
+    DATA = reactiveVal(NULL)
     
     observeEvent({
-        input$selDataset
+        input$btnLoadDataset
     }, {
-        req_vars = c(
-            "profile_dt",
-            "tsne_dt",
-            "query_gr",
-            "agg_dt",
-            "overlap_dt",
-            "annotation_dt",
-            "config_dt",
-            "color_mapping"
-        )
-        hidden = sapply(req_vars, function(x)remove(x))
+        removeModal()
         sel = input$selDataset
+        showNotification(paste("start", sel))
+        message(paste("start", sel))
         src = UI_DATASOURCES[sel]
-        browser()
         res = load_dataset(src)
-        
-        sapply(req_vars, function(x)exists(x))
+        DATA(res)
+        # hidden = sapply(req_vars, function(x)remove(x))
+        showNotification(paste("end", sel))
+        message(paste("end", sel))
+        # sapply(req_vars, function(x)exists(x))
+    })
+    
+    observeEvent({
+        DATA()
+    }, {
+        if(is.null(DATA())){
+            shinyjs::show("loadPrompt")
+        }else{
+            shinyjs::hide("loadPrompt")
+        }
+    })
+    
+    observeEvent({
+        DATA()
+    }, {
+        showNotification(paste("update UI"))
+        UI_TALLV(unique(DATA()$config_dt$tall_var))
+        UI_WIDEV(unique(DATA()$config_dt$wide_var))
+        UI_GENES(unique(DATA()$query_gr$gene_name))
+        UI_CELLS(unique(DATA()$config_dt$cell))
+        UI_MARKS(unique(DATA()$config_dt$mark))
     })
     
     output$ui_global_cells = renderUI({
-        req(UI_CELLS())
+        req(UI_TALLV())
         checkboxGroupInput(
             "selCells",
             "Select Cells",
-            choices = UI_CELLS(),
-            selected = UI_CELLS()
+            choices = UI_TALLV(),
+            selected = UI_TALLV()
         )
     })
     
     output$ui_global_marks = renderUI({
-        req(UI_MARKS())
+        req(UI_WIDEV())
         checkboxGroupInput(
             "selMarks",
             "Select Marks",
-            choices = UI_MARKS(),
-            selected = UI_MARKS()[1]
+            choices = UI_WIDEV(),
+            selected = UI_WIDEV()[1]
         )
     })
     
@@ -84,18 +110,16 @@ shinyServer(function(input, output) {
         yrng = plot_zoom_yrng()
         frac_shown = max(c(diff(xrng), diff(yrng)))
         point_size = .1 / frac_shown
-        
+        # browser()
+        # tp = 
         if(typ == GLOBAL_VIEW_POINTS){
             if(length(input$selMarks) >= 1){
                 if(length(input$selMarks) == 2){
                     corr_dt = dcast(
-                        agg_dt[cell %in% input$selCells & mark %in% input$selMarks], 
-                        id+cell+tx+ty~mark, value.var = "value")
+                        DATA()$agg_dt[tall_var %in% input$selCells & wide_var %in% input$selMarks], 
+                        id+tall_var+tx+ty~wide_var, value.var = "value")
                     corr_dt$difference = corr_dt[, 6] - corr_dt[,5]
                     corr_dt$agreement = pmin(corr_dt[, 6], corr_dt[,5])
-                    # browser()
-                    
-                    
                     val_dt = melt(corr_dt[, .(tx, ty, difference, agreement)],
                                   id.vars = c("tx", "ty"),
                                   measure.vars = c("difference", "agreement"))
@@ -128,7 +152,6 @@ shinyServer(function(input, output) {
                              fill = paste("min of", colnames(corr_dt)[5],
                                           "\nand", colnames(corr_dt)[6]))
                     
-                    # browser()
                     # p = ggplot(corr_dt, aes(x = tx, y = ty, color = diff)) +
                     #     geom_point(size = point_size) + 
                     #     scale_color_gradientn(colors = c("blue", "white", "red"), 
@@ -149,42 +172,61 @@ shinyServer(function(input, output) {
                 }else{
                     nc = ceiling(sqrt(length(input$selMarks)))
                     p = ggplot(
-                        agg_dt[cell %in% input$selCells & mark %in% input$selMarks], 
+                        DATA()$agg_dt[tall_var %in% input$selCells & wide_var %in% input$selMarks], 
                         aes(x = tx, y = ty, color = value)) +
                         geom_point(size = point_size) +  
                         coord_cartesian(xlim = xrng, ylim = yrng) +
-                        facet_wrap("mark", ncol = nc)    
+                        facet_wrap("wide_var", ncol = nc)    
                 }
             }else{
-                p = ggplot(tsne_dt[cell %in% input$selCells], aes(x = tx, y = ty)) +
+                p = ggplot(DATA()$tsne_dt[tall_var %in% input$selCells], aes(x = tx, y = ty)) +
                     coord_cartesian(xlim = xrng, ylim = yrng) +
                     geom_point(size = point_size)
             }
             
         }else if(typ == GLOBAL_VIEW_DENSITY){
-            p = ggplot(tsne_dt[cell %in% input$selCells], aes(x = tx, y = ty)) +
+            p = ggplot(DATA()$tsne_dt[tall_var %in% input$selCells], aes(x = tx, y = ty)) +
                 coord_cartesian(xlim = xrng, ylim = yrng) +
                 geom_density2d() + 
-                facet_wrap("cell") 
+                facet_wrap("tall_var") 
         }else if(typ == GLOBAL_VIEW_PROFILES_FAST){
-            p = stsPlotSummaryProfiles(profile_dt,
-                                       tsne_dt, 
-                                       q_cells = input$selCells,
-                                       q_marks = input$selMarks,
+            if(input$selGlobalColoring == "mark"){
+                tmp = unique(DATA()$profile_dt[, .(wide_var, mark)])
+                cm = DATA()$color_mapping[tmp$mark]
+                names(cm) = tmp$wide_var    
+            }else{
+                tmp = unique(DATA()$profile_dt[, .(wide_var, cell)])
+                cm = DATA()$color_mapping.alt[tmp$cell]
+                names(cm) = tmp$wide_var    
+            }
+            
+            p = stsPlotSummaryProfiles(DATA()$profile_dt,
+                                       DATA()$tsne_dt, 
+                                       q_tall_vars = input$selCells,
+                                       q_wide_vars = input$selMarks,
                                        x_points = input$numBins,
                                        xrng = xrng,
                                        yrng = yrng,
-                                       line_color_mapping = color_mapping
-                                        )
+                                       line_color_mapping = cm
+            )
             p
         }else if(typ == GLOBAL_VIEW_PROFILES_SLOW){
-            p = stsPlotSummaryProfiles(profile_dt, tsne_dt, 
-                                       q_cells = input$selCells,
-                                       q_marks = input$selMarks,
+            if(input$selGlobalColoring == "mark"){
+                tmp = unique(DATA()$profile_dt[, .(wide_var, mark)])
+                cm = DATA()$color_mapping[tmp$mark]
+                names(cm) = tmp$wide_var    
+            }else{
+                tmp = unique(DATA()$profile_dt[, .(wide_var, cell)])
+                cm = DATA()$color_mapping.alt[tmp$cell]
+                names(cm) = tmp$wide_var    
+            }
+            p = stsPlotSummaryProfiles(DATA()$profile_dt, DATA()$tsne_dt, 
+                                       q_tall_vars = input$selCells,
+                                       q_wide_vars = input$selMarks,
                                        x_points = input$numBins, 
                                        xrng = xrng,
                                        yrng = yrng,
-                                       line_color_mapping = color_mapping,
+                                       line_color_mapping = cm,
                                        plot_type = "raster")
         }
         p +
@@ -195,8 +237,8 @@ shinyServer(function(input, output) {
     
     output$zoomPlot <- renderPlot({
         ggplot()
-        # zimg_res = make_tsne_img(profile_dt[cell %in%  input$selCells],
-        #                          tsne_dt, n_points = input$bins,
+        # zimg_res = make_tsne_img(DATA()$profile_dt[cell %in%  input$selCells],
+        #                          DATA()$tsne_dt, n_points = input$bins,
         #                          xrng = sel_zoom_xrng(), yrng = sel_zoom_yrng())
         # p = make_img_plots(zimg_res, min_size = .3, qcell = input$selCells,
         #                    xrng = sel_zoom_xrng(),
@@ -212,16 +254,16 @@ shinyServer(function(input, output) {
     })
     
     output$genePlot <- renderPlot({
-        plot_velocity_arrows_selected(tsne_dt,
-                                      query_gr,
+        plot_velocity_arrows_selected(DATA()$tsne_dt,
+                                      DATA()$query_gr,
                                       input$selCells,
                                       tss_ids = input$selGenes) +
             coord_fixed() + theme_classic() + labs(x = "", y = "")
     })
     
     output$profilePlot <- renderPlot({
-        plot_profiles_selected(profile_dt,
-                               query_gr,
+        plot_profiles_selected(DATA()$profile_dt,
+                               DATA()$query_gr,
                                input$selCells,
                                tss_ids = input$selGenes) +
             theme_classic() + labs(x = "", y = "")
@@ -272,7 +314,7 @@ shinyServer(function(input, output) {
               msg_head, msg_click, msg_brush, 
               msg_xrng, msg_yrng, 
               msg_pxrng, msg_pyrng
-              )
+        )
         
     })
     
@@ -289,13 +331,12 @@ shinyServer(function(input, output) {
         
     })
     
-    
     output$pairArrows = renderPlot({
         # req(cellPair())
         # cp = cellPair()
         cp = c("H7", "CD34")
         if(length(cp) == 2){
-            vel_plots = plot_velocity_arrows(tsne_dt, cp[1], cp[2])
+            vel_plots = plot_velocity_arrows(DATA()$tsne_dt, cp[1], cp[2])
         }
         vel_plots[[1]] + theme_classic()
     })
@@ -305,16 +346,10 @@ shinyServer(function(input, output) {
         # cp = cellPair()
         cp = c("H7", "CD34")
         if(length(cp) == 2){
-            vel_plots = plot_velocity_arrows(tsne_dt, cp[1], cp[2])
+            vel_plots = plot_velocity_arrows(DATA()$tsne_dt, cp[1], cp[2])
         }
         vel_plots[[2]]
     })
-    
-    # output$pairArrows = renderPlot({
-    #
-    #         vel_pl
-    #     plot_velocity_arrows(tsne_dt, cp[1], cp[2])[[1]] + theme_classic()
-    # })
     
     sel_zoom_xrng = reactiveVal(c(-.5, .5))
     sel_zoom_yrng = reactiveVal(c(-.5, .5))
@@ -324,7 +359,6 @@ shinyServer(function(input, output) {
     
     observeEvent(input$global_brush, {
         if(is.null(input$global_brush)){
-            browser()
             xrng = c(-.5, .5)
             yrng = c(-.5, .5)
         }else{
@@ -352,24 +386,23 @@ shinyServer(function(input, output) {
     zoom_id = reactiveVal(NULL)
     
     observe({
+        req(DATA())
         xrng = sel_zoom_xrng()
         yrng = sel_zoom_yrng()
-        samp_id = sampleCap(tsne_dt[tx >= min(xrng) & tx <= max(xrng) & ty >= min(yrng) & ty <= max(yrng), ]$id, 100)
+        samp_id = sampleCap(DATA()$tsne_dt[tx >= min(xrng) & tx <= max(xrng) & ty >= min(yrng) & ty <= max(yrng), ]$id, 100)
         zoom_id(samp_id)
     })
-        
+    
     output$detailPlot = renderPlot({
         req(input$n_detail)
         req(input$selMarksDetail)
         req(input$selCellsDetail)
         n_detail = input$n_detail
         samp_id = zoom_id()[seq(n_detail)]
-        qgr = query_gr[samp_id]
-        # prof_dt = profile_dt[id %in% samp_id & mark %in% input$selMarks & cell %in% input$selCells]
-        # browser()
+        qgr = subset(DATA()$query_gr, id %in% samp_id)
         qdt = config_dt[mark %in% input$selMarksDetail & 
                             cell %in% input$selCellsDetail, ]
-        qdt$norm_factor = 1
+        # qdt$norm_factor = 1
         prof_dt = stsFetchTsneInput(qdt, 
                                     cap_value = Inf,
                                     qgr = qgr, 
@@ -378,21 +411,20 @@ shinyServer(function(input, output) {
         prof_dt$id = factor(prof_dt$id, levels = samp_id)
         ggplot(prof_dt, aes(x = x, y = y, color = mark, group = paste(id, cell, mark))) +
             geom_path() +
-            scale_color_manual(values = color_mapping) + 
+            scale_color_manual(values = DATA()$color_mapping) + 
             facet_grid("cell~id") +
             scale_x_continuous(breaks = 0) +
             labs(x = "relative position", y = "fold-enrichment") +
             theme(axis.text.x = element_blank())
     })
-        
+    
     # })
     
     output$tableGenes = DT::renderDT(expr = {
         xrng = sel_zoom_xrng()
         yrng = sel_zoom_yrng()
-        reg_id = tsne_dt[tx >= min(xrng) & tx <= max(xrng) & ty >= min(yrng) & ty <= max(yrng), ]$id
-        gene_dt = unique(annotation_dt[id %in% reg_id][distance < 1e6][order(distance)])
-        # browser()
+        reg_id = DATA()$tsne_dt[tx >= min(xrng) & tx <= max(xrng) & ty >= min(yrng) & ty <= max(yrng), ]$id
+        gene_dt = unique(DATA()$annotation_dt[id %in% reg_id][distance < 1e6][order(distance)])
         DT::datatable(gene_dt, options = list(pageLength = 15), filter = "top")
     }, server = TRUE)
     
@@ -401,9 +433,9 @@ shinyServer(function(input, output) {
         max_dist = 3e4
         gene_text = input$textGeneQ
         gene_list = strsplit(toupper(gene_text), "[ ,]+")[[1]]
-        hit_id = unique(annotation_dt[gene_name %in% gene_list & distance <= max_dist]$id)
+        hit_id = unique(DATA()$annotation_dt[gene_name %in% gene_list & distance <= max_dist]$id)
         ggplot() + 
-            annotate("point", x =  tsne_dt$tx, y = tsne_dt$ty, size = .2, color = "gray") +
-            annotate("point", x =  tsne_dt[id %in% hit_id]$tx, y = tsne_dt[id %in% hit_id]$ty, size = .2, color = "red")
+            annotate("point", x =  DATA()$tsne_dt$tx, y = DATA()$tsne_dt$ty, size = .2, color = "gray") +
+            annotate("point", x =  DATA()$tsne_dt[id %in% hit_id]$tx, y = DATA()$tsne_dt[id %in% hit_id]$ty, size = .2, color = "red")
     })
 })

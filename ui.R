@@ -12,9 +12,15 @@ source("setup.R")
 
 # Define UI for application that draws a histogram
 shinyUI(fluidPage(
-    selectInput("selDataset", "Select Dataset", choices = UI_DATASETS),
+    shinyjs::useShinyjs(),
+
+    # h3(id = "loadPrompt", "select data to load", style="color:red;"),
+    # fluidRow(
+    #     column(width = 4, actionButton("btnLoadDataset", "Load")),
+    #     column(width = 4, h3(id = "loadPrompt", "select data to load", style="color:red;"))
+    # ),
     # Application title
-    titlePanel("Runx1 bookmarking with seqtsne", windowTitle = "seqtsne"),
+    titlePanel("seqtsne", windowTitle = "seqtsne"),
     
     # Sidebar with a slider input for number of bins
     
@@ -56,7 +62,7 @@ shinyUI(fluidPage(
                                          # )
                                      )
                                  ),
-                                 
+                                 radioButtons("selGlobalColoring", label = "Color By", choices = c("mark", "cell", "both")),
                                  sliderInput("numBins",
                                              "Number of bins:",
                                              min = 2,
