@@ -13,16 +13,9 @@ source("setup.R")
 # Define UI for application that draws a histogram
 shinyUI(fluidPage(
     shinyjs::useShinyjs(),
-
-    # h3(id = "loadPrompt", "select data to load", style="color:red;"),
-    # fluidRow(
-    #     column(width = 4, actionButton("btnLoadDataset", "Load")),
-    #     column(width = 4, h3(id = "loadPrompt", "select data to load", style="color:red;"))
-    # ),
+    
     # Application title
     titlePanel("seqtsne", windowTitle = "seqtsne"),
-    
-    # Sidebar with a slider input for number of bins
     
     tabsetPanel(tabPanel("Basic Plot",
                          sidebarLayout(
@@ -44,22 +37,10 @@ shinyUI(fluidPage(
                                      column(
                                          width = 4,
                                          uiOutput("ui_global_cells")
-                                         # checkboxGroupInput(
-                                         #     "selCells",
-                                         #     "Select Cells",
-                                         #     choices = UI_CELLS,
-                                         #     selected = UI_CELLS
-                                         # )
                                      ),
                                      column(
                                          width = 4,
                                          uiOutput("ui_global_marks")
-                                         # checkboxGroupInput(
-                                         #     "selMarks",
-                                         #     "Select Marks",
-                                         #     choices = UI_MARKS,
-                                         #     selected = UI_MARKS[1]
-                                         # )
                                      )
                                  ),
                                  radioButtons("selGlobalColoring", label = "Color By", choices = c("mark", "cell", "both")),
@@ -68,7 +49,6 @@ shinyUI(fluidPage(
                                              min = 2,
                                              max = 16,
                                              value = 8),
-                                 # selectInput("selGenes", "Select Genes", choices = UI_GENES, selected = "RUNX1"),
                                  verbatimTextOutput("globalDebug")
                              ),
                              
@@ -112,26 +92,18 @@ shinyUI(fluidPage(
                 column(
                     width = 4,
                     uiOutput("ui_zoom_cells")
-                    # checkboxGroupInput(
-                    #     "selCellsDetail",
-                    #     "Select Cells",
-                    #     choices = UI_CELLS,
-                    #     selected = UI_CELLS
-                    # )
                 ),
                 column(
                     width = 4,
                     uiOutput("ui_zoom_marks")
-                    # checkboxGroupInput(
-                    #     "selMarksDetail",
-                    #     "Select Marks",
-                    #     choices = UI_MARKS,
-                    #     selected = UI_MARKS
-                    # )
                 ),
                 column(
                     width = 4,
-                    numericInput("n_detail", "Number of regions to plot", value = 5, min = 1, max = 20, step = 1)  
+                    numericInput("n_detail", "Number of regions to plot", 
+                                 value = 5, min = 1, max = 20, step = 1),
+                    numericInput("detail_view_size", "View size", 
+                                 value = 1000, min = 100, max = 2e4, step = 100),
+                    radioButtons("sel_detail_type", label = "Select Type", choices = c("sample", "aggregate"))
                 )
             )
         ),

@@ -398,24 +398,64 @@ shinyServer(function(input, output) {
         req(input$selMarksDetail)
         req(input$selCellsDetail)
         n_detail = input$n_detail
-        samp_id = zoom_id()[seq(n_detail)]
-        qgr = subset(DATA()$query_gr, id %in% samp_id)
+        view_size = input$detail_view_size
+        
         qdt = config_dt[mark %in% input$selMarksDetail & 
                             cell %in% input$selCellsDetail, ]
-        # qdt$norm_factor = 1
-        prof_dt = stsFetchTsneInput(qdt, 
-                                    cap_value = Inf,
-                                    qgr = qgr, 
-                                    qwin = 100, 
-                                    skip_checks = TRUE)$bw_dt
-        prof_dt$id = factor(prof_dt$id, levels = samp_id)
-        ggplot(prof_dt, aes(x = x, y = y, color = mark, group = paste(id, cell, mark))) +
-            geom_path() +
-            scale_color_manual(values = DATA()$color_mapping) + 
-            facet_grid("cell~id") +
-            scale_x_continuous(breaks = 0) +
-            labs(x = "relative position", y = "fold-enrichment") +
-            theme(axis.text.x = element_blank())
+
+        if(input$sel_detail_type == "sample"){
+            samp_id = zoom_id()[seq(n_detail)]
+            qgr = subset(DATA()$query_gr, id %in% samp_id)
+           
+            # browser()
+            # qdt$norm_factor = 1
+            if(is.null(qdt$file)){
+                prof_dt = DATA()$profile_dt[id %in% samp_id]
+            }else{
+                # browser()
+                prof_dt = stsFetchTsneInput(qdt, 
+                                            cap_value = Inf,
+                                            qgr = resize(qgr, view_size, fix = "center"), 
+                                            qmet = "sample",
+                                            # qwin = 50, 
+                                            qwin = round(view_size / 100),
+                                            skip_checks = TRUE)$bw_dt    
+            }
+            
+            prof_dt$id = factor(prof_dt$id, levels = samp_id)
+            ggplot(prof_dt, aes(x = x, y = y, color = mark, group = paste(id, cell, mark))) +
+                geom_path() +
+                scale_color_manual(values = DATA()$color_mapping) + 
+                facet_grid("cell~id") +
+                scale_x_continuous(breaks = 0) +
+                labs(x = "relative position", y = "fold-enrichment") +
+                theme(axis.text.x = element_blank())
+        }else{
+            samp_id = zoom_id()
+            qgr = subset(DATA()$query_gr, id %in% samp_id)
+            if(is.null(qdt$file)){
+                prof_dt = DATA()$profile_dt
+            }else{
+                # browser()
+                prof_dt = stsFetchTsneInput(qdt, 
+                                            cap_value = Inf,
+                                            qgr = resize(qgr, view_size, fix = "center"), 
+                                            qmet = "sample",
+                                            # qwin = 50, 
+                                            qwin = round(view_size / 100),
+                                            skip_checks = TRUE)$bw_dt    
+            }
+            # browser()
+            agg_dt = prof_dt[, .(y = mean(y)), .(x, cell, mark)]
+            # ggplot(agg_dt, aes)
+            ggplot(agg_dt, aes(x = x, y = y, color = mark, group = paste(cell, mark))) +
+                geom_path() +
+                scale_color_manual(values = DATA()$color_mapping) + 
+                facet_grid("cell~.") +
+                scale_x_continuous(breaks = 0) +
+                labs(x = "relative position", y = "fold-enrichment") +
+                theme(axis.text.x = element_blank())
+        }
     })
     
     # })
@@ -425,7 +465,14 @@ shinyServer(function(input, output) {
         yrng = sel_zoom_yrng()
         reg_id = DATA()$tsne_dt[tx >= min(xrng) & tx <= max(xrng) & ty >= min(yrng) & ty <= max(yrng), ]$id
         gene_dt = unique(DATA()$annotation_dt[id %in% reg_id][distance < 1e6][order(distance)])
-        DT::datatable(gene_dt, options = list(pageLength = 15), filter = "top")
+        DT::datatable(gene_dt, 
+                      extensions = c('Buttons', 'Scroller'),
+                      options = list(pageLength = 15,
+                                     scrollY = 400,
+                                     scroller = TRUE,
+                                     dom = 'Bfrtip',
+                                     buttons = c('copy', 'csv', 'excel', 'pdf')), 
+                      filter = "top")
     }, server = TRUE)
     
     
@@ -439,3 +486,14 @@ shinyServer(function(input, output) {
             annotate("point", x =  DATA()$tsne_dt[id %in% hit_id]$tx, y = DATA()$tsne_dt[id %in% hit_id]$ty, size = .2, color = "red")
     })
 })
+
+# myModal <- function() {
+#     div(id = "test",
+#         modalDialog(downloadButton("download1","Download iris as csv"),
+#                     br(),
+#                     br(),
+#                     downloadButton("download2","Download iris as csv2"),
+#                     easyClose = TRUE, title = "Download Table")
+#     )
+# }
+

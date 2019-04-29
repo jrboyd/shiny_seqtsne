@@ -14,13 +14,15 @@ suppressPackageStartupMessages({
 options(mc.cores = 16)
 message(getwd())
 
+D_EXAMPLE = "example"
 D_HESC_CD34 = "hESC and CD34 bivalency"
 D_BCELL = "B cell bivalency"
 D_MSC_TIME = "MSC timecourse bivalency"
 D_WALDRON_CONSENSUS = "Waldron hESC+CD34 consensus"
-UI_DATASETS = c(D_WALDRON_CONSENSUS, D_HESC_CD34, D_BCELL, D_MSC_TIME)
+UI_DATASETS = c(D_EXAMPLE, D_WALDRON_CONSENSUS, D_HESC_CD34, D_BCELL, D_MSC_TIME)
 data_dir = "~/ShinyApps/shiny_seqtsne"
-UI_DATASOURCES = c(file.path(data_dir, "dataset_scripts/generate_data_hESC_and_CD34_consensus.R"),
+UI_DATASOURCES = c(file.path(data_dir, "dataset_scripts/generate_example.R"),
+                   file.path(data_dir, "dataset_scripts/generate_data_hESC_and_CD34_consensus.R"),
                    file.path(data_dir, "dataset_scripts/generate_data_hESC_and_CD34_biv_wide_full.R"),
                    file.path(data_dir, "dataset_scripts/generate_data_Bcell_biv_wide_full.R"),
                    file.path(data_dir, "dataset_scripts/generate_data_MSC_biv_wide_full.R"))
