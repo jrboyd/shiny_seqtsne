@@ -1,14 +1,46 @@
 # if(!exists("LOADED")){
 # LOADED = TRUE
+
 suppressPackageStartupMessages({
     library(shiny)
     library(shinyjs)
-    library(data.table)
-    library(seqsetvis)
-    library(seqtsne)
     library(magrittr)
-    library(GenomicRanges)
+    library(shinycssloaders)
+    # library(GenomicRanges)
+    # library(data.table)
+    # library(seqsetvis)
+    # library(seqtsne)
 })
+
+load_libs_withProgress = function(libs, session){
+    tmp.sink = suppressPackageStartupMessages({
+        # libs = c(
+        #     "data.table",
+        #     "rtracklayer",
+        #     "GenomicRanges",
+        #     "ggplot2",
+        #     "cowplot",
+        #     "seqsetvis"
+        # )
+        withProgress(session = session, 
+                     message = 'Loading libraries', 
+                     value = 0, 
+                     max = length(libs),  
+                     expr = {
+                         for(i in seq_along(libs)){
+                             incProgress(session = session,
+                                         amount = 1, 
+                                         message = libs[i],
+                                         detail = paste0("(", i, "/", length(libs), ")"))
+                             library(libs[i], character.only = TRUE)
+                         }
+                         
+                         
+                     })
+    })
+}
+
+
 # source("generate_data.R")
 
 options(mc.cores = 16)

@@ -16,8 +16,20 @@ shinyUI(fluidPage(
     
     # Application title
     titlePanel("seqtsne", windowTitle = "seqtsne"),
-    
-    tabsetPanel(tabPanel("Basic Plot",
+    div(
+        id = "waiting-content",
+        h2("Dataset has not been selected.")
+    ),
+    hidden(div(
+        id = "loading-content",
+        h2("Loading...", id = "loading-status")
+        #,
+
+    )),
+    hidden(
+        div(
+            id = "app-content",
+            tabsetPanel(tabPanel("Basic Plot",
                          sidebarLayout(
                              sidebarPanel(
                                  fluidRow(
@@ -62,8 +74,8 @@ shinyUI(fluidPage(
                              # Show a plot of the generated distribution
                              mainPanel(
                                  fluidRow(
-                                     plotOutput("globalPlot", width = "600px", height = "600px",
-                                                brush = brushOpts("global_brush", delay = 500, delayType = "debounce"), click = "global_click"),
+                                     withSpinner(plotOutput("globalPlot", width = "600px", height = "600px",
+                                                            brush = brushOpts("global_brush", delay = 500, delayType = "debounce"), click = "global_click")),
                                      actionButton("btnZoom", "Zoom"),
                                      actionButton("btnReset", "Reset")
                                  )#,
@@ -115,8 +127,15 @@ shinyUI(fluidPage(
             )
         ),
         mainPanel(
-            plotOutput("detailPlot", width = "600px", height = "600px")
+            fluidRow(
+                column(
+                    width = 4,
+                    withSpinner(plotOutput("detailPlot", width = "600px", height = "600px"))        
+                )
+            )
+            
         )
     )
+        ))
 )
 )

@@ -8,7 +8,7 @@
 #
 
 # Define server logic required to draw a histogram
-shinyServer(function(input, output) {
+shinyServer(function(input, output, session) {
     
     showModal(modalDialog(    
         selectInput("selDataset", "Select Dataset", choices = UI_DATASETS),
@@ -16,6 +16,17 @@ shinyServer(function(input, output) {
             actionButton("btnLoadDataset", "Load")    
         )
     ))
+    
+    load_libs_withProgress(c("GenomicRanges", 
+                             "data.table",
+                             "seqsetvis",
+                             "seqtsne"),
+                           session
+    )
+    # library(GenomicRanges)
+    # library(data.table)
+    # library(seqsetvis)
+    # library(seqtsne)
     
     UI_TALLV = reactiveVal(NULL)
     UI_WIDEV = reactiveVal(NULL)
@@ -27,13 +38,37 @@ shinyServer(function(input, output) {
     observeEvent({
         input$btnLoadDataset
     }, {
+        # runjs("var today = new Date(); alert(today);")
+        shinyjs::runjs({
+            'function sleep(ms) {
+               return new Promise(resolve => setTimeout(resolve, ms));
+             }
+             async function myFunction() {
+             var text = "";
+             var i = 0;
+             document.getElementById("loading-status").innerHTML = "Loading";
+             while (1 < 10) {
+               await sleep(500);
+               document.getElementById("loading-status").innerHTML = "Loading" + ".".repeat(i);
+               if(getComputedStyle(document.getElementById("loading-content")).display == "none")
+                 break;
+               i++;
+             }
+             }
+             myFunction()
+             '
+        })
         removeModal()
+        shinyjs::hide("waiting-content")
+        shinyjs::show("loading-content")
         sel = input$selDataset
         showNotification(paste("start", sel))
         message(paste("start", sel))
         src = UI_DATASOURCES[sel]
         res = load_dataset(src)
         DATA(res)
+        shinyjs::hide("loading-content")
+        shinyjs::show("app-content")
         # hidden = sapply(req_vars, function(x)remove(x))
         showNotification(paste("end", sel))
         message(paste("end", sel))
@@ -150,7 +185,8 @@ shinyServer(function(input, output) {
                             labels = c(0, .5, 1),
                             limits = c(0, 1)
                         ) +
-                        coord_cartesian(xlim = xrng, ylim = yrng) +
+                        coord_fixed(xlim = xrng, ylim = yrng, ratio = diff(xrng)/diff(yrng)) +
+                        # coord_cartesian(xlim = xrng, ylim = yrng) +
                         facet_wrap("variable") +
                         labs(color = "difference",
                              fill = paste("min of", colnames(corr_dt)[5],
@@ -496,14 +532,15 @@ shinyServer(function(input, output) {
             annotate("point", x =  DATA()$tsne_dt[id %in% hit_id]$tx, y = DATA()$tsne_dt[id %in% hit_id]$ty, size = .2, color = "red")
     })
 })
-
-# myModal <- function() {
-#     div(id = "test",
-#         modalDialog(downloadButton("download1","Download iris as csv"),
-#                     br(),
-#                     br(),
-#                     downloadButton("download2","Download iris as csv2"),
-#                     easyClose = TRUE, title = "Download Table")
-#     )
-# }
-
+    
+    # myModal <- function() {
+    #     div(id = "test",
+    #         modalDialog(downloadButton("download1","Download iris as csv"),
+    #                     br(),
+    #                     br(),
+    #                     downloadButton("download2","Download iris as csv2"),
+    #                     easyClose = TRUE, title = "Download Table")
+    #     )
+    # }
+    
+    
