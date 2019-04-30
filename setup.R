@@ -6,11 +6,14 @@ suppressPackageStartupMessages({
     library(shinyjs)
     library(magrittr)
     library(shinycssloaders)
+    library(colourpicker)
     # library(GenomicRanges)
     # library(data.table)
     # library(seqsetvis)
     # library(seqtsne)
 })
+
+source("functions.R")
 
 load_libs_withProgress = function(libs, session){
     tmp.sink = suppressPackageStartupMessages({

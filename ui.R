@@ -18,124 +18,142 @@ shinyUI(fluidPage(
     titlePanel("seqtsne", windowTitle = "seqtsne"),
     div(
         id = "waiting-content",
-        h2("Dataset has not been selected.")
+        h4("Dataset has not been selected.")
     ),
     hidden(div(
         id = "loading-content",
-        h2("Loading...", id = "loading-status")
+        h4("Loading", id = "loading-status", style = "word-wrap:break-word")
         #,
-
+        
     )),
     hidden(
         div(
             id = "app-content",
             tabsetPanel(tabPanel("Basic Plot",
-                         sidebarLayout(
-                             sidebarPanel(
-                                 fluidRow(
-                                     column(
-                                         width = 4,
-                                         radioButtons(
-                                             "globalViewType",
-                                             label = "Global View",
-                                             choices = c(
-                                                 GLOBAL_VIEW_POINTS,
-                                                 GLOBAL_VIEW_PROFILES_FAST,
-                                                 GLOBAL_VIEW_PROFILES_SLOW,
-                                                 GLOBAL_VIEW_DENSITY
+                                 sidebarLayout(
+                                     sidebarPanel(
+                                         fluidRow(
+                                             column(
+                                                 width = 4,
+                                                 radioButtons(
+                                                     "globalViewType",
+                                                     label = "Global View",
+                                                     choices = c(
+                                                         GLOBAL_VIEW_POINTS,
+                                                         GLOBAL_VIEW_PROFILES_FAST,
+                                                         GLOBAL_VIEW_PROFILES_SLOW,
+                                                         GLOBAL_VIEW_DENSITY
+                                                     )
+                                                 )
+                                             ),
+                                             column(
+                                                 width = 4,
+                                                 uiOutput("ui_global_cells")
+                                             ),
+                                             column(
+                                                 width = 4,
+                                                 uiOutput("ui_global_marks")
                                              )
-                                         )
+                                         ),
+                                         radioButtons("selGlobalColoring", 
+                                                      label = "Color By", 
+                                                      choices = c("mark", "cell", "both")),
+                                         actionButton("btnCustomColors", label = "Customize Colors"),
+                                         radioButtons("selNumPlotted", 
+                                                      label = "Number of points plotted:", 
+                                                      inline = TRUE,
+                                                      choices = c("500", "5000", "50000", "all"), 
+                                                      selected = "5000"),
+                                         sliderInput("numBins",
+                                                     "Number of bins:",
+                                                     min = 2,
+                                                     max = 16,
+                                                     value = 8),
+                                         verbatimTextOutput("globalDebug")
                                      ),
-                                     column(
-                                         width = 4,
-                                         uiOutput("ui_global_cells")
-                                     ),
-                                     column(
-                                         width = 4,
-                                         uiOutput("ui_global_marks")
+                                     
+                                     # Show a plot of the generated distribution
+                                     mainPanel(
+                                         fluidRow(
+                                             withSpinner(plotOutput("globalPlot", 
+                                                                    width = "600px", 
+                                                                    height = "600px",
+                                                                    brush = brushOpts("global_brush", 
+                                                                                      delay = 500, 
+                                                                                      delayType = "debounce"), 
+                                                                    click = "global_click")),
+                                             actionButton("btnZoom", "Zoom"),
+                                             actionButton("btnReset", "Reset")
+                                         )#,
+                                         # fluidRow(
+                                         #     plotOutput("genePlot", width = "400px", height = "400px"),
+                                         #     plotOutput("profilePlot", width = "400px", height = "400px")
+                                         # ),
+                                         # fluidRow(
+                                         #     plotOutput("pairArrows", width = "400px", height = "400px"),
+                                         #     plotOutput("pairKey", width = "400px", height = "400px")
+                                         # 
+                                         # )
                                      )
-                                 ),
-                                 radioButtons("selGlobalColoring", 
-                                              label = "Color By", 
-                                              choices = c("mark", "cell", "both")),
-                                 radioButtons("selNumPlotted", 
-                                              label = "Number of points plotted:", 
-                                              inline = TRUE,
-                                              choices = c("500", "5000", "50000", "all"), 
-                                              selected = "5000"),
-                                 sliderInput("numBins",
-                                             "Number of bins:",
-                                             min = 2,
-                                             max = 16,
-                                             value = 8),
-                                 verbatimTextOutput("globalDebug")
-                             ),
-                             
-                             # Show a plot of the generated distribution
-                             mainPanel(
-                                 fluidRow(
-                                     withSpinner(plotOutput("globalPlot", width = "600px", height = "600px",
-                                                            brush = brushOpts("global_brush", delay = 500, delayType = "debounce"), click = "global_click")),
-                                     actionButton("btnZoom", "Zoom"),
-                                     actionButton("btnReset", "Reset")
-                                 )#,
-                                 # fluidRow(
-                                 #     plotOutput("genePlot", width = "400px", height = "400px"),
-                                 #     plotOutput("profilePlot", width = "400px", height = "400px")
-                                 # ),
-                                 # fluidRow(
-                                 #     plotOutput("pairArrows", width = "400px", height = "400px"),
-                                 #     plotOutput("pairKey", width = "400px", height = "400px")
-                                 # 
-                                 # )
-                             )
+                                 )
+            ), 
+            tabPanel("Gene Table",
+                     sidebarLayout(
+                         sidebarPanel = sidebarPanel(
+                             actionButton("dlGeneTable", label = "Download"),
+                             checkboxInput("dlUnique", label = "as unique gene list", value = TRUE),
+                             textOutput("textCountUnique")
+                         ),
+                         mainPanel = mainPanel(
+                             withSpinner(DT::dataTableOutput("tableGenes", width = "600px"))
                          )
-    ), 
-    tabPanel("Gene Table",
-             sidebarLayout(
-                 sidebarPanel = sidebarPanel(),
-                 mainPanel = mainPanel(
-                     DT::dataTableOutput("tableGenes", width = "600px")
-                 )
-             )
-    )
-    ,
-    tabPanel("Gene Query",
-             textInput("textGeneQ", label = "Gene Query", value = "Runx1 Runx2"),
-             plotOutput("geneQPlot", width = "600px", height = "600px")
-    )
-    ),
-    sidebarLayout(
-        sidebarPanel(
-            fluidRow(
-                column(
-                    width = 4,
-                    uiOutput("ui_zoom_cells")
+                     )
+            )
+            ,
+            tabPanel("Gene Query",
+                     textInput("textGeneQ", label = "Gene Query", value = "Runx1 Runx2"),
+                     withSpinner(plotOutput("geneQPlot", 
+                                            width = "600px", 
+                                            height = "600px",
+                                            brush = brushOpts("geneq_brush", 
+                                                              delay = 500, 
+                                                              delayType = "debounce"), 
+                                            click = "geneq_click"))
+            )
+            ),
+            sidebarLayout(
+                sidebarPanel(
+                    fluidRow(
+                        column(
+                            width = 4,
+                            uiOutput("ui_zoom_cells")
+                        ),
+                        column(
+                            width = 4,
+                            uiOutput("ui_zoom_marks")
+                        ),
+                        column(
+                            width = 4,
+                            numericInput("n_detail", "Number of regions to plot", 
+                                         value = 5, min = 1, max = 20, step = 1),
+                            numericInput("detail_view_size", "View size", 
+                                         value = 1000, min = 100, max = 2e4, step = 100),
+                            radioButtons("sel_detail_type", label = "Select Type", choices = c("sample", "aggregate"))
+                        )
+                    )
                 ),
-                column(
-                    width = 4,
-                    uiOutput("ui_zoom_marks")
-                ),
-                column(
-                    width = 4,
-                    numericInput("n_detail", "Number of regions to plot", 
-                                 value = 5, min = 1, max = 20, step = 1),
-                    numericInput("detail_view_size", "View size", 
-                                 value = 1000, min = 100, max = 2e4, step = 100),
-                    radioButtons("sel_detail_type", label = "Select Type", choices = c("sample", "aggregate"))
+                mainPanel(
+                    fluidRow(
+                        column(
+                            width = 4,
+                            withSpinner(plotOutput("detailPlot", 
+                                                   width = "600px", 
+                                                   height = "600px"))        
+                        )
+                    )
+                    
                 )
             )
-        ),
-        mainPanel(
-            fluidRow(
-                column(
-                    width = 4,
-                    withSpinner(plotOutput("detailPlot", width = "600px", height = "600px"))        
-                )
-            )
-            
-        )
-    )
         ))
 )
 )

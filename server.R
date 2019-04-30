@@ -9,20 +9,27 @@
 
 # Define server logic required to draw a histogram
 shinyServer(function(input, output, session) {
+    #stop app when tab closed
+    session$onSessionEnded(stopApp)
+    #load libs with a progress bar.
+    load_libs_withProgress(
+        libs = c(
+            "GenomicRanges", 
+            "data.table",
+            "seqsetvis",
+            "seqtsne"
+        ),
+        session = session
+    )
     
     showModal(modalDialog(    
         selectInput("selDataset", "Select Dataset", choices = UI_DATASETS),
         footer = tagList(
-            actionButton("btnLoadDataset", "Load")    
+            actionButton("btnLoadDataset", label = "Load")    
         )
     ))
     
-    load_libs_withProgress(c("GenomicRanges", 
-                             "data.table",
-                             "seqsetvis",
-                             "seqtsne"),
-                           session
-    )
+    
     # library(GenomicRanges)
     # library(data.table)
     # library(seqsetvis)
@@ -62,7 +69,6 @@ shinyServer(function(input, output, session) {
         shinyjs::hide("waiting-content")
         shinyjs::show("loading-content")
         sel = input$selDataset
-        showNotification(paste("start", sel))
         message(paste("start", sel))
         src = UI_DATASOURCES[sel]
         res = load_dataset(src)
@@ -70,7 +76,6 @@ shinyServer(function(input, output, session) {
         shinyjs::hide("loading-content")
         shinyjs::show("app-content")
         # hidden = sapply(req_vars, function(x)remove(x))
-        showNotification(paste("end", sel))
         message(paste("end", sel))
         # sapply(req_vars, function(x)exists(x))
     })
@@ -88,7 +93,6 @@ shinyServer(function(input, output, session) {
     observeEvent({
         DATA()
     }, {
-        showNotification(paste("update UI"))
         UI_TALLV(unique(DATA()$config_dt$tall_var))
         UI_WIDEV(unique(DATA()$config_dt$wide_var))
         UI_GENES(unique(DATA()$query_gr$gene_name))
@@ -505,19 +509,26 @@ shinyServer(function(input, output, session) {
     })
     
     # })
+    gene_dt = reactiveVal(NULL)
     
-    output$tableGenes = DT::renderDT(expr = {
+    observeEvent({
+        sel_zoom_xrng()
+        sel_zoom_yrng()
+        DATA()
+    }, {
         xrng = sel_zoom_xrng()
         yrng = sel_zoom_yrng()
         reg_id = DATA()$tsne_dt[tx >= min(xrng) & tx <= max(xrng) & ty >= min(yrng) & ty <= max(yrng), ]$id
-        gene_dt = unique(DATA()$annotation_dt[id %in% reg_id][distance < 1e6][order(distance)])
-        DT::datatable(gene_dt, 
-                      extensions = c('Buttons', 'Scroller'),
+        dt = unique(DATA()$annotation_dt[id %in% reg_id][distance < 1e6][order(distance)])
+        gene_dt(dt)
+    })
+    
+    output$tableGenes = DT::renderDT(expr = {
+        DT::datatable(gene_dt(), 
+                      extensions = c('Scroller'),
                       options = list(pageLength = 15,
                                      scrollY = 400,
-                                     scroller = TRUE,
-                                     dom = 'Bfrtip',
-                                     buttons = c('copy', 'csv', 'excel', 'pdf')), 
+                                     scroller = TRUE), 
                       filter = "top")
     }, server = TRUE)
     
@@ -531,16 +542,84 @@ shinyServer(function(input, output, session) {
             annotate("point", x =  DATA()$tsne_dt$tx, y = DATA()$tsne_dt$ty, size = .2, color = "gray") +
             annotate("point", x =  DATA()$tsne_dt[id %in% hit_id]$tx, y = DATA()$tsne_dt[id %in% hit_id]$ty, size = .2, color = "red")
     })
+    
+    observeEvent({
+        input$dlGeneTable
+    }, {
+        showModal(
+            modalDialog(title = "Dowload Gene Table", 
+                        footer = fluidRow(
+                            downloadButton("dlCsv", label = "Download csv"),
+                            downloadButton("dlXlsx", label = "Download xlsx")
+                        ),
+                        textInput("txtPrefix", 
+                                  label = "File Prefix", 
+                                  value = "tsne_selected_genes")
+            )
+        )
+    })
+    
+    output$dlCsv = downloadHandler(
+        filename = function(){
+            pre = input$txtPrefix
+            if(pre == ""){
+                pre = "tsne_selected_genes"
+            }
+            pre = paste0(pre, ".csv")
+            pre
+        }, 
+        content = function(file){
+            chk = input$dlUnique
+            if(chk){
+                odt = unique(gene_dt()[input$tableGenes_rows_all, .(gene_name)])
+                
+            }else{
+                odt = gene_dt()[input$tableGenes_rows_all,]
+            }
+            fwrite(odt, file)
+            browser()
+            
+            removeModal()
+        }
+    )
+    
+    output$dlXlsx = downloadHandler(
+        filename = function(){
+            pre = input$txtPrefix
+            if(pre == ""){
+                pre = "tsne_selected_genes"
+            }
+            pre = paste0(pre, ".xlsx")
+            pre
+        }, 
+        content = function(file){
+            chk = input$dlUnique
+            if(chk){
+                odt = unique(gene_dt()[input$tableGenes_rows_all, .(gene_name)])
+                
+            }else{
+                odt = gene_dt()[input$tableGenes_rows_all,]
+            }
+            openxlsx::write.xlsx(odt, file)
+            removeModal()
+        }
+    )
+    
+    output$textCountUnique = renderText({
+        paste(length(gene_dt()[input$tableGenes_rows_all,]$gene_name), "unique genes")
+    })
+    
+    observeEvent({
+        input$btnCustomColors
+    }, {
+        showModal(modalDialog(
+            gen_color_picker_ui(names(color_mapping)),
+            title = "Customize Color", 
+            footer = fluidRow(
+                actionButton("btnCancelCustomColors", label = "Cancel"),
+                actionButton("btnApplyCustomColors", label = "OK")
+            )
+        ))
+    })
 })
-    
-    # myModal <- function() {
-    #     div(id = "test",
-    #         modalDialog(downloadButton("download1","Download iris as csv"),
-    #                     br(),
-    #                     br(),
-    #                     downloadButton("download2","Download iris as csv2"),
-    #                     easyClose = TRUE, title = "Download Table")
-    #     )
-    # }
-    
-    
+
