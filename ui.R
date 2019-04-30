@@ -43,7 +43,14 @@ shinyUI(fluidPage(
                                          uiOutput("ui_global_marks")
                                      )
                                  ),
-                                 radioButtons("selGlobalColoring", label = "Color By", choices = c("mark", "cell", "both")),
+                                 radioButtons("selGlobalColoring", 
+                                              label = "Color By", 
+                                              choices = c("mark", "cell", "both")),
+                                 radioButtons("selNumPlotted", 
+                                              label = "Number of points plotted:", 
+                                              inline = TRUE,
+                                              choices = c("500", "5000", "50000", "all"), 
+                                              selected = "5000"),
                                  sliderInput("numBins",
                                              "Number of bins:",
                                              min = 2,

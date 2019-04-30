@@ -110,13 +110,17 @@ shinyServer(function(input, output) {
         yrng = plot_zoom_yrng()
         frac_shown = max(c(diff(xrng), diff(yrng)))
         point_size = .1 / frac_shown
-        # browser()
+        in_view_id =  DATA()$tsne_dt[tx >= min(xrng) & tx <= max(xrng) & ty >= min(yrng) & ty <= max(yrng)]$id
+        if(!input$selNumPlotted == "all"){
+            set.seed(0)
+            in_view_id = sampleCap(in_view_id, as.numeric(input$selNumPlotted))
+        }
         # tp = 
         if(typ == GLOBAL_VIEW_POINTS){
             if(length(input$selMarks) >= 1){
                 if(length(input$selMarks) == 2){
                     corr_dt = dcast(
-                        DATA()$agg_dt[tall_var %in% input$selCells & wide_var %in% input$selMarks], 
+                        DATA()$agg_dt[id %in% in_view_id][tall_var %in% input$selCells & wide_var %in% input$selMarks], 
                         id+tall_var+tx+ty~wide_var, value.var = "value")
                     corr_dt$difference = corr_dt[, 6] - corr_dt[,5]
                     corr_dt$agreement = pmin(corr_dt[, 6], corr_dt[,5])
@@ -172,14 +176,14 @@ shinyServer(function(input, output) {
                 }else{
                     nc = ceiling(sqrt(length(input$selMarks)))
                     p = ggplot(
-                        DATA()$agg_dt[tall_var %in% input$selCells & wide_var %in% input$selMarks], 
+                        DATA()$agg_dt[id %in% in_view_id][tall_var %in% input$selCells & wide_var %in% input$selMarks], 
                         aes(x = tx, y = ty, color = value)) +
                         geom_point(size = point_size) +  
                         coord_cartesian(xlim = xrng, ylim = yrng) +
                         facet_wrap("wide_var", ncol = nc)    
                 }
             }else{
-                p = ggplot(DATA()$tsne_dt[tall_var %in% input$selCells], aes(x = tx, y = ty)) +
+                p = ggplot(DATA()$tsne_dt[id %in% in_view_id][tall_var %in% input$selCells], aes(x = tx, y = ty)) +
                     coord_cartesian(xlim = xrng, ylim = yrng) +
                     geom_point(size = point_size)
             }
@@ -194,14 +198,19 @@ shinyServer(function(input, output) {
                 tmp = unique(DATA()$profile_dt[, .(wide_var, mark)])
                 cm = DATA()$color_mapping[tmp$mark]
                 names(cm) = tmp$wide_var    
+            }else if(input$selGlobalColoring == "both"){
+                # brows er()
+                # tmp = unique(DATA()$profile_dt[, .(wide_var, cell, mark)])
+                cm = DATA()$color_mapping.full[unique(DATA()$profile_dt$wide_var)]
+                names(cm) = unique(DATA()$profile_dt$wide_var)
             }else{
                 tmp = unique(DATA()$profile_dt[, .(wide_var, cell)])
                 cm = DATA()$color_mapping.alt[tmp$cell]
                 names(cm) = tmp$wide_var    
             }
             
-            p = stsPlotSummaryProfiles(DATA()$profile_dt,
-                                       DATA()$tsne_dt, 
+            p = stsPlotSummaryProfiles(DATA()$profile_dt[id %in% in_view_id, ],
+                                       DATA()$tsne_dt[id %in% in_view_id, ], 
                                        q_tall_vars = input$selCells,
                                        q_wide_vars = input$selMarks,
                                        x_points = input$numBins,
@@ -212,7 +221,7 @@ shinyServer(function(input, output) {
             p
         }else if(typ == GLOBAL_VIEW_PROFILES_SLOW){
             if(input$selGlobalColoring == "mark"){
-                tmp = unique(DATA()$profile_dt[, .(wide_var, mark)])
+                tmp = unique(DATA()$profile_dt[id %in% in_view_id, .(wide_var, mark)])
                 cm = DATA()$color_mapping[tmp$mark]
                 names(cm) = tmp$wide_var    
             }else{
@@ -220,7 +229,8 @@ shinyServer(function(input, output) {
                 cm = DATA()$color_mapping.alt[tmp$cell]
                 names(cm) = tmp$wide_var    
             }
-            p = stsPlotSummaryProfiles(DATA()$profile_dt, DATA()$tsne_dt, 
+            p = stsPlotSummaryProfiles(DATA()$profile_dt[id %in% in_view_id, ], 
+                                       DATA()$tsne_dt[id %in% in_view_id, ], 
                                        q_tall_vars = input$selCells,
                                        q_wide_vars = input$selMarks,
                                        x_points = input$numBins, 
@@ -402,11 +412,11 @@ shinyServer(function(input, output) {
         
         qdt = config_dt[mark %in% input$selMarksDetail & 
                             cell %in% input$selCellsDetail, ]
-
+        qdt$norm_factor = 1
         if(input$sel_detail_type == "sample"){
             samp_id = zoom_id()[seq(n_detail)]
             qgr = subset(DATA()$query_gr, id %in% samp_id)
-           
+            
             # browser()
             # qdt$norm_factor = 1
             if(is.null(qdt$file)){

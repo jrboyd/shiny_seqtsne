@@ -85,11 +85,14 @@ load_dataset = function(src){
         names(color_mapping.alt) = cm_alt
     }
     if(!exists("color_mapping.full") || is.null(color_mapping.full)){
-        cm_full = unique(paste(config_dt$cell,config_dt$mark))
+        # cm_full = unique(paste(config_dt$cell,config_dt$mark))
+        cm_full = unique(config_dt$wide_var)
         color_mapping.full = safeBrew(n = length(cm_full))
         names(color_mapping.full) = cm_full
     }
     
+    setkey(profile_dt, "id")
+    setkey(tsne_dt, "id")
     res = list(
         profile_dt = profile_dt,
         tsne_dt = tsne_dt,
@@ -99,7 +102,8 @@ load_dataset = function(src){
         annotation_dt = annotation_dt,
         config_dt = config_dt,
         color_mapping = color_mapping,
-        color_mapping.alt = color_mapping.alt
+        color_mapping.alt = color_mapping.alt,
+        color_mapping.full = color_mapping.full
     )
     res
     # mdt = prep_summary(profile_dt, tsne_dt, 12)
