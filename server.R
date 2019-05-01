@@ -606,10 +606,10 @@ shinyServer(function(input, output, session) {
     get_curr_col = function(){
         if(input$selGlobalColoring == "mark"){
             cm = DATA()$color_mapping_byMark
-        }else if(input$selGlobalColoring == "both"){
-            cm = DATA()$color_mapping_byBoth
         }else if(input$selGlobalColoring == "cell"){
             cm = DATA()$color_mapping_byCell
+        }else if(input$selGlobalColoring == "both"){
+            cm = DATA()$color_mapping_byBoth
         }else{
             stop("unable to get_curr_col, unrecognized input$selGlobalColoring")
         }
@@ -621,12 +621,12 @@ shinyServer(function(input, output, session) {
         if(input$selGlobalColoring == "mark"){
             stopifnot(names(res$color_mapping_byMark) == names(cm))
             res$color_mapping_byMark = cm
-        }else if(input$selGlobalColoring == "both"){
-            stopifnot(names(res$color_mapping_byMark_byWide) == names(cm))
-            res$color_mapping_byMark_byWide = cm
         }else if(input$selGlobalColoring == "cell"){
-            stopifnot(names(res$color_mapping_byMark_byCell) == names(cm))
-            res$color_mapping_byMark_byCell = cm
+            stopifnot(names(res$color_mapping_byCell) == names(cm))
+            res$color_mapping_byCell = cm
+        }else if(input$selGlobalColoring == "both"){
+            stopifnot(names(res$color_mapping_byBoth) == names(cm))
+            res$color_mapping_byBoth = cm
         }else{
             stop("unable to set_curr_col, unrecognized input$selGlobalColoring")
         }
