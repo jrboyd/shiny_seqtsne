@@ -14,6 +14,7 @@ source("setup.R")
 shinyUI(fluidPage(
     shinyjs::useShinyjs(),
     
+    hidden(colourInput("col1", "Col1")),#necessary for any other colourPicker to work
     # Application title
     titlePanel("seqtsne", windowTitle = "seqtsne"),
     div(

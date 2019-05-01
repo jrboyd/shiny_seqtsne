@@ -54,9 +54,13 @@ shinyServer(function(input, output, session) {
              var text = "";
              var i = 0;
              document.getElementById("loading-status").innerHTML = "Loading";
+             tps = 5
              while (1 < 10) {
-               await sleep(500);
-               document.getElementById("loading-status").innerHTML = "Loading" + ".".repeat(i);
+               await sleep(1000/tps);
+               txt = document.getElementById("loading-status").innerHTML
+               nxt = "."
+               if(i % tps == tps - 1) nxt = (i + 1) / tps;
+               document.getElementById("loading-status").innerHTML = txt + nxt;
                if(getComputedStyle(document.getElementById("loading-content")).display == "none")
                  break;
                i++;
@@ -234,21 +238,21 @@ shinyServer(function(input, output, session) {
                 geom_density2d() + 
                 facet_wrap("tall_var") 
         }else if(typ == GLOBAL_VIEW_PROFILES_FAST){
-            if(input$selGlobalColoring == "mark"){
-                tmp = unique(DATA()$profile_dt[, .(wide_var, mark)])
-                cm = DATA()$color_mapping[tmp$mark]
-                names(cm) = tmp$wide_var    
-            }else if(input$selGlobalColoring == "both"){
-                # brows er()
-                # tmp = unique(DATA()$profile_dt[, .(wide_var, cell, mark)])
-                cm = DATA()$color_mapping.full[unique(DATA()$profile_dt$wide_var)]
-                names(cm) = unique(DATA()$profile_dt$wide_var)
-            }else{
-                tmp = unique(DATA()$profile_dt[, .(wide_var, cell)])
-                cm = DATA()$color_mapping.alt[tmp$cell]
-                names(cm) = tmp$wide_var    
-            }
-            
+            # if(input$selGlobalColoring == "mark"){
+            #     tmp = unique(DATA()$profile_dt[, .(wide_var, mark)])
+            #     cm = DATA()$color_mapping_byMark[tmp$mark]
+            #     names(cm) = tmp$wide_var    
+            # }else if(input$selGlobalColoring == "both"){
+            #     # brows er()
+            #     # tmp = unique(DATA()$profile_dt[, .(wide_var, cell, mark)])
+            #     cm = DATA()$color_mapping_byMark_byWide[unique(DATA()$profile_dt$wide_var)]
+            #     names(cm) = unique(DATA()$profile_dt$wide_var)
+            # }else{
+            #     tmp = unique(DATA()$profile_dt[, .(wide_var, cell)])
+            #     cm = DATA()$color_mapping_byMark_byCell[tmp$cell]
+            #     names(cm) = tmp$wide_var    
+            # }
+            cm = get_curr_col()
             p = stsPlotSummaryProfiles(DATA()$profile_dt[id %in% in_view_id, ],
                                        DATA()$tsne_dt[id %in% in_view_id, ], 
                                        q_tall_vars = input$selCells,
@@ -256,19 +260,21 @@ shinyServer(function(input, output, session) {
                                        x_points = input$numBins,
                                        xrng = xrng,
                                        yrng = yrng,
+                                       ylim = DATA()$tylim,
                                        line_color_mapping = cm
             )
             p
         }else if(typ == GLOBAL_VIEW_PROFILES_SLOW){
-            if(input$selGlobalColoring == "mark"){
-                tmp = unique(DATA()$profile_dt[id %in% in_view_id, .(wide_var, mark)])
-                cm = DATA()$color_mapping[tmp$mark]
-                names(cm) = tmp$wide_var    
-            }else{
-                tmp = unique(DATA()$profile_dt[, .(wide_var, cell)])
-                cm = DATA()$color_mapping.alt[tmp$cell]
-                names(cm) = tmp$wide_var    
-            }
+            # if(input$selGlobalColoring == "mark"){
+            #     tmp = unique(DATA()$profile_dt[id %in% in_view_id, .(wide_var, mark)])
+            #     cm = DATA()$color_mapping_byMark[tmp$mark]
+            #     names(cm) = tmp$wide_var    
+            # }else{
+            #     tmp = unique(DATA()$profile_dt[, .(wide_var, cell)])
+            #     cm = DATA()$color_mapping_byMark_byCell[tmp$cell]
+            #     names(cm) = tmp$wide_var    
+            # }
+            cm = get_curr_col()
             p = stsPlotSummaryProfiles(DATA()$profile_dt[id %in% in_view_id, ], 
                                        DATA()$tsne_dt[id %in% in_view_id, ], 
                                        q_tall_vars = input$selCells,
@@ -276,6 +282,7 @@ shinyServer(function(input, output, session) {
                                        x_points = input$numBins, 
                                        xrng = xrng,
                                        yrng = yrng,
+                                       ylim = DATA()$tylim,
                                        line_color_mapping = cm,
                                        plot_type = "raster")
         }
@@ -475,7 +482,7 @@ shinyServer(function(input, output, session) {
             prof_dt$id = factor(prof_dt$id, levels = samp_id)
             ggplot(prof_dt, aes(x = x, y = y, color = mark, group = paste(id, cell, mark))) +
                 geom_path() +
-                scale_color_manual(values = DATA()$color_mapping) + 
+                scale_color_manual(values = DATA()$color_mapping_byMark) + 
                 facet_grid("cell~id") +
                 scale_x_continuous(breaks = 0) +
                 labs(x = "relative position", y = "fold-enrichment") +
@@ -500,7 +507,7 @@ shinyServer(function(input, output, session) {
             # ggplot(agg_dt, aes)
             ggplot(agg_dt, aes(x = x, y = y, color = mark, group = paste(cell, mark))) +
                 geom_path() +
-                scale_color_manual(values = DATA()$color_mapping) + 
+                scale_color_manual(values = DATA()$color_mapping_byMark) + 
                 facet_grid("cell~.") +
                 scale_x_continuous(breaks = 0) +
                 labs(x = "relative position", y = "fold-enrichment") +
@@ -612,14 +619,74 @@ shinyServer(function(input, output, session) {
     observeEvent({
         input$btnCustomColors
     }, {
+        browser()
+        curr_col = get_curr_col()
         showModal(modalDialog(
-            gen_color_picker_ui(names(color_mapping)),
+            gen_color_picker_ui(
+                picker_names = names(curr_col), 
+                initial_colors = curr_col
+            ),
             title = "Customize Color", 
             footer = fluidRow(
                 actionButton("btnCancelCustomColors", label = "Cancel"),
                 actionButton("btnApplyCustomColors", label = "OK")
             )
         ))
+    })
+    
+    get_curr_col = function(){
+        browser()
+        if(input$selGlobalColoring == "mark"){
+            tmp = unique(DATA()$profile_dt[, .(wide_var, mark)])
+            cm = DATA()$color_mapping_byMark[tmp$mark]
+            names(cm) = tmp$wide_var    
+        }else if(input$selGlobalColoring == "both"){
+            # tmp = unique(DATA()$profile_dt[, .(wide_var, cell, mark)])
+            cm = DATA()$color_mapping_byMark_byWide[unique(DATA()$profile_dt$wide_var)]
+            names(cm) = unique(DATA()$profile_dt$wide_var)
+        }else if(input$selGlobalColoring == "cell"){
+            # browser()
+            tmp = unique(DATA()$profile_dt[, .(wide_var, cell)])
+            cm = DATA()$color_mapping_byMark_byCell[tmp$cell]
+            names(cm) = tmp$wide_var    
+        }else{
+            stop("unable to get_curr_col, unrecognized input$selGlobalColoring")
+        }
+        cm
+        # browser()
+    }
+    
+    set_curr_col = function(cm){
+        if(input$selGlobalColoring == "mark"){
+            stopifnot(names(DATA()$color_mapping_byMark) == names(cm))
+            DATA()$color_mapping_byMark = cm
+        }else if(input$selGlobalColoring == "both"){
+            stopifnot(names(DATA()$color_mapping_byMark_byWide) == names(cm))
+            DATA()$color_mapping_byMark_byWide = cm
+        }else if(input$selGlobalColoring == "cell"){
+            stopifnot(names(DATA()$color_mapping_byMark_byCell) == names(cm))
+            DATA()$color_mapping_byMark_byCell = cm
+        }else{
+            stop("unable to set_curr_col, unrecognized input$selGlobalColoring")
+        }
+        cm
+        # browser()
+    }
+    
+    observeEvent({
+        input$btnCancelCustomColors
+    }, {
+        removeModal()
+    })
+    
+    observeEvent({
+        input$btnApplyCustomColors
+    }, {
+        browser()
+        cm = get_curr_col()
+        cm_new = fetch_color_picker_ui(names(cm), input)
+        set_curr_col(cm_new)
+        removeModal()
     })
 })
 

@@ -100,30 +100,42 @@ GLOBAL_VIEW_DENSITY = "density"
 
 load_dataset = function(src){
     source(src)
-    # n_tp = 5000
-    # set.seed(1)
-    # UI_TP <<- sample(unique(tsne_dt$id), n_tp / length(UI_CELLS))
-    # tsne_tp = tsne_dt[id %in% UI_TP]
-    # if(!exists("color_mapping")){
-    #     color_mapping = safeBrew(length(UI_MARKS))
-    #     names(color_mapping) = UI_MARKS    
-    # }
-    # names(query_gr) = query_gr$id
     if(!exists("color_mapping") || is.null(color_mapping)){
         cm = unique(config_dt$mark)
-        color_mapping = safeBrew(length(cm))
+        color_mapping = safeBrew(length(cm), pal = "Set1")
         names(color_mapping) = cm
     }
+    if(setequal(names(color_mapping), unique(config_dt$mark)) &&
+       !setequal(names(color_mapping), unique(config_dt$wide_var))){
+            tmp = unique(config_dt[, .(wide_var, mark)])
+            color_mapping = color_mapping[tmp$mark]
+            names(color_mapping) = tmp$wide_var
+    }
+    stopifnot(setequal(names(color_mapping), unique(config_dt$wide_var)))
+    
     if(!exists("color_mapping.alt") || is.null(color_mapping.alt)){
         cm_alt = unique(config_dt$cell)
-        color_mapping.alt = safeBrew(length(cm_alt))
+        color_mapping.alt = safeBrew(length(cm_alt), pal = "Dark2")
         names(color_mapping.alt) = cm_alt
     }
+    if(setequal(names(color_mapping.alt), unique(config_dt$cell)) &&
+       !setequal(names(color_mapping.alt), unique(config_dt$wide_var))){
+        tmp = unique(config_dt[, .(wide_var, cell)])
+        color_mapping.alt = color_mapping.alt[tmp$cell]
+        names(color_mapping.alt) = tmp$wide_var
+    }
+    stopifnot(setequal(names(color_mapping.alt), unique(config_dt$wide_var)))
+    
     if(!exists("color_mapping.full") || is.null(color_mapping.full)){
-        # cm_full = unique(paste(config_dt$cell,config_dt$mark))
         cm_full = unique(config_dt$wide_var)
-        color_mapping.full = safeBrew(n = length(cm_full))
+        color_mapping.full = safeBrew(n = length(cm_full), pal = "Set3")
         names(color_mapping.full) = cm_full
+    }
+    stopifnot(setequal(names(color_mapping.full), unique(config_dt$wide_var)))
+    
+    
+    if(!exists("tylim") || is.null(color_mapping.full)){
+        tylim = range(profile_dt$y)
     }
     
     setkey(profile_dt, "id")
@@ -133,19 +145,12 @@ load_dataset = function(src){
         tsne_dt = tsne_dt,
         query_gr = query_gr,
         agg_dt = agg_dt,
-        # overlap_dt = overlap_dt,
         annotation_dt = annotation_dt,
         config_dt = config_dt,
-        color_mapping = color_mapping,
-        color_mapping.alt = color_mapping.alt,
-        color_mapping.full = color_mapping.full
+        color_mapping_byMark = color_mapping,
+        color_mapping_byCell = color_mapping.alt,
+        color_mapping_byBoth = color_mapping.full,
+        tylim = tylim
     )
     res
-    # mdt = prep_summary(profile_dt, tsne_dt, 12)
-    # glyph_df = GGally::glyphs(mdt, x_major = "bx", x_minor = "x", y_major = "by", y_minor = "y")
-    # ggplot(glyph_df, aes(gx, gy, group = paste(gid, mark), color = mark)) +
-    #     geom_path() +
-    #     scale_color_manual(values =  color_mapping)
-    
-    
 }
