@@ -41,19 +41,25 @@ shinyUI(fluidPage(
                                                      label = "Global View",
                                                      choices = c(
                                                          GLOBAL_VIEW_POINTS,
+                                                         GLOBAL_VIEW_POINTS_COMPARISON,
+                                                         GLOBAL_VIEW_POINTS_RGB,
                                                          GLOBAL_VIEW_PROFILES_FAST,
-                                                         GLOBAL_VIEW_PROFILES_SLOW,
-                                                         GLOBAL_VIEW_DENSITY
+                                                         GLOBAL_VIEW_PROFILES_SLOW#,
+                                                         # GLOBAL_VIEW_DENSITY
                                                      )
                                                  )
                                              ),
-                                             column(
-                                                 width = 4,
-                                                 uiOutput("ui_global_cells")
-                                             ),
-                                             column(
-                                                 width = 4,
-                                                 uiOutput("ui_global_marks")
+                                             shinyjs::hidden(
+                                                 tags$div(id = "app-tall-wide-sel",
+                                                          column(
+                                                              width = 4,
+                                                              uiOutput("ui_global_cells")
+                                                          ),
+                                                          column(
+                                                              width = 4,
+                                                              uiOutput("ui_global_marks")
+                                                          )
+                                                 )
                                              )
                                          ),
                                          radioButtons("selGlobalColoring", 

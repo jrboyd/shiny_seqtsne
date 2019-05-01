@@ -1,6 +1,8 @@
 # if(!exists("LOADED")){
 # LOADED = TRUE
 
+rm(list=ls())
+
 suppressPackageStartupMessages({
     library(shiny)
     library(shinyjs)
@@ -66,7 +68,9 @@ names(UI_DATASOURCES)= UI_DATASETS
 
 UI_DATASETS = UI_DATASETS
 
-GLOBAL_VIEW_POINTS = "points"
+GLOBAL_VIEW_POINTS = "points max value"
+GLOBAL_VIEW_POINTS_COMPARISON = "points diff/agree"
+GLOBAL_VIEW_POINTS_RGB = "points color RGB"
 GLOBAL_VIEW_PROFILES_FAST = "profiles (fast)"
 GLOBAL_VIEW_PROFILES_SLOW = "profiles (slow)"
 GLOBAL_VIEW_DENSITY = "density"
@@ -100,38 +104,41 @@ GLOBAL_VIEW_DENSITY = "density"
 
 load_dataset = function(src){
     source(src)
+    .cells = unique(profile_dt$cell)
+    .marks = unique(profile_dt$mark)
+    .wide_vars = unique(profile_dt$wide_var)
+    
     if(!exists("color_mapping") || is.null(color_mapping)){
-        cm = unique(config_dt$mark)
+        cm = .marks
         color_mapping = safeBrew(length(cm), pal = "Set1")
         names(color_mapping) = cm
     }
-    if(setequal(names(color_mapping), unique(config_dt$mark)) &&
-       !setequal(names(color_mapping), unique(config_dt$wide_var))){
-            tmp = unique(config_dt[, .(wide_var, mark)])
+    if(setequal(names(color_mapping), .marks) &&
+       !setequal(names(color_mapping), .wide_vars)){
+            tmp = unique(profile_dt[, .(wide_var, mark)])
             color_mapping = color_mapping[tmp$mark]
             names(color_mapping) = tmp$wide_var
     }
-    stopifnot(setequal(names(color_mapping), unique(config_dt$wide_var)))
-    
+    stopifnot(setequal(names(color_mapping), .wide_vars))
     if(!exists("color_mapping.alt") || is.null(color_mapping.alt)){
-        cm_alt = unique(config_dt$cell)
+        cm_alt = .cells
         color_mapping.alt = safeBrew(length(cm_alt), pal = "Dark2")
         names(color_mapping.alt) = cm_alt
     }
-    if(setequal(names(color_mapping.alt), unique(config_dt$cell)) &&
-       !setequal(names(color_mapping.alt), unique(config_dt$wide_var))){
-        tmp = unique(config_dt[, .(wide_var, cell)])
+    if(setequal(names(color_mapping.alt), .cells) &&
+       !setequal(names(color_mapping.alt), .wide_vars)){
+        tmp = unique(profile_dt[, .(wide_var, cell)])
         color_mapping.alt = color_mapping.alt[tmp$cell]
         names(color_mapping.alt) = tmp$wide_var
     }
-    stopifnot(setequal(names(color_mapping.alt), unique(config_dt$wide_var)))
+    stopifnot(setequal(names(color_mapping.alt), .wide_vars))
     
     if(!exists("color_mapping.full") || is.null(color_mapping.full)){
-        cm_full = unique(config_dt$wide_var)
+        cm_full = .wide_vars
         color_mapping.full = safeBrew(n = length(cm_full), pal = "Set3")
         names(color_mapping.full) = cm_full
     }
-    stopifnot(setequal(names(color_mapping.full), unique(config_dt$wide_var)))
+    stopifnot(setequal(names(color_mapping.full), .wide_vars))
     
     
     if(!exists("tylim") || is.null(color_mapping.full)){

@@ -144,6 +144,18 @@ shinyServer(function(input, output, session) {
         )
     })
     
+    observeEvent({#manage conditional UI elements based on globalViewType
+        input$globalViewType
+    }, {
+        if(input$globalViewType %in% c(GLOBAL_VIEW_POINTS, 
+                                       GLOBAL_VIEW_PROFILES_FAST, 
+                                       GLOBAL_VIEW_PROFILES_SLOW)){
+            shinyjs::show("app-tall-wide-sel")
+        }else{
+            shinyjs::hide("app-tall-wide-sel")
+        }
+    })
+    
     output$globalPlot <- renderPlot({
         req(input$selCells)
         req(input$selMarks)
@@ -265,15 +277,6 @@ shinyServer(function(input, output, session) {
             )
             p
         }else if(typ == GLOBAL_VIEW_PROFILES_SLOW){
-            # if(input$selGlobalColoring == "mark"){
-            #     tmp = unique(DATA()$profile_dt[id %in% in_view_id, .(wide_var, mark)])
-            #     cm = DATA()$color_mapping_byMark[tmp$mark]
-            #     names(cm) = tmp$wide_var    
-            # }else{
-            #     tmp = unique(DATA()$profile_dt[, .(wide_var, cell)])
-            #     cm = DATA()$color_mapping_byMark_byCell[tmp$cell]
-            #     names(cm) = tmp$wide_var    
-            # }
             cm = get_curr_col()
             p = stsPlotSummaryProfiles(DATA()$profile_dt[id %in% in_view_id, ], 
                                        DATA()$tsne_dt[id %in% in_view_id, ], 
@@ -456,21 +459,17 @@ shinyServer(function(input, output, session) {
         req(input$selCellsDetail)
         n_detail = input$n_detail
         view_size = input$detail_view_size
-        
         qdt = config_dt[mark %in% input$selMarksDetail & 
                             cell %in% input$selCellsDetail, ]
         qdt$norm_factor = 1
         if(input$sel_detail_type == "sample"){
             samp_id = zoom_id()[seq(n_detail)]
             qgr = subset(DATA()$query_gr, id %in% samp_id)
-            
-            # browser()
-            # qdt$norm_factor = 1
             if(is.null(qdt$file)){
                 prof_dt = DATA()$profile_dt[id %in% samp_id]
             }else{
                 # browser()
-                prof_dt = stsFetchTsneInput(qdt, 
+                prof_dt = stsFetchTsneInput(qdt[, .(file, tall_var, wide_var, cell, mark, norm_factor)], 
                                             cap_value = Inf,
                                             qgr = resize(qgr, view_size, fix = "center"), 
                                             qmet = "sample",
@@ -480,21 +479,21 @@ shinyServer(function(input, output, session) {
             }
             
             prof_dt$id = factor(prof_dt$id, levels = samp_id)
-            ggplot(prof_dt, aes(x = x, y = y, color = mark, group = paste(id, cell, mark))) +
+            ggplot(prof_dt, aes(x = x, y = y, color = wide_var, group = paste(id, cell, mark))) +
                 geom_path() +
-                scale_color_manual(values = DATA()$color_mapping_byMark) + 
+                scale_color_manual(values = get_curr_col()) + 
                 facet_grid("cell~id") +
                 scale_x_continuous(breaks = 0) +
                 labs(x = "relative position", y = "fold-enrichment") +
                 theme(axis.text.x = element_blank())
-        }else{
+        }else if(input$sel_detail_type == "aggregate"){
             samp_id = zoom_id()
             qgr = subset(DATA()$query_gr, id %in% samp_id)
             if(is.null(qdt$file)){
                 prof_dt = DATA()$profile_dt
             }else{
                 # browser()
-                prof_dt = stsFetchTsneInput(qdt, 
+                prof_dt = stsFetchTsneInput(qdt[, .(file, tall_var, wide_var, cell, mark, norm_factor)], 
                                             cap_value = Inf,
                                             qgr = resize(qgr, view_size, fix = "center"), 
                                             qmet = "sample",
@@ -503,15 +502,17 @@ shinyServer(function(input, output, session) {
                                             skip_checks = TRUE)$bw_dt    
             }
             # browser()
-            agg_dt = prof_dt[, .(y = mean(y)), .(x, cell, mark)]
+            agg_dt = prof_dt[, .(y = mean(y)), .(x, cell, mark, wide_var)]
             # ggplot(agg_dt, aes)
-            ggplot(agg_dt, aes(x = x, y = y, color = mark, group = paste(cell, mark))) +
+            ggplot(agg_dt, aes(x = x, y = y, color = wide_var, group = paste(cell, mark))) +
                 geom_path() +
-                scale_color_manual(values = DATA()$color_mapping_byMark) + 
+                scale_color_manual(values = get_curr_col()) + 
                 facet_grid("cell~.") +
                 scale_x_continuous(breaks = 0) +
                 labs(x = "relative position", y = "fold-enrichment") +
                 theme(axis.text.x = element_blank())
+        }else{
+            stop("unrecognized input$sel_detail_type")
         }
     })
     
@@ -619,7 +620,6 @@ shinyServer(function(input, output, session) {
     observeEvent({
         input$btnCustomColors
     }, {
-        browser()
         curr_col = get_curr_col()
         showModal(modalDialog(
             gen_color_picker_ui(
@@ -635,42 +635,33 @@ shinyServer(function(input, output, session) {
     })
     
     get_curr_col = function(){
-        browser()
         if(input$selGlobalColoring == "mark"){
-            tmp = unique(DATA()$profile_dt[, .(wide_var, mark)])
-            cm = DATA()$color_mapping_byMark[tmp$mark]
-            names(cm) = tmp$wide_var    
+            cm = DATA()$color_mapping_byMark
         }else if(input$selGlobalColoring == "both"){
-            # tmp = unique(DATA()$profile_dt[, .(wide_var, cell, mark)])
-            cm = DATA()$color_mapping_byMark_byWide[unique(DATA()$profile_dt$wide_var)]
-            names(cm) = unique(DATA()$profile_dt$wide_var)
+            cm = DATA()$color_mapping_byBoth
         }else if(input$selGlobalColoring == "cell"){
-            # browser()
-            tmp = unique(DATA()$profile_dt[, .(wide_var, cell)])
-            cm = DATA()$color_mapping_byMark_byCell[tmp$cell]
-            names(cm) = tmp$wide_var    
+            cm = DATA()$color_mapping_byCell
         }else{
             stop("unable to get_curr_col, unrecognized input$selGlobalColoring")
         }
         cm
-        # browser()
     }
     
     set_curr_col = function(cm){
+        res = DATA()
         if(input$selGlobalColoring == "mark"){
-            stopifnot(names(DATA()$color_mapping_byMark) == names(cm))
-            DATA()$color_mapping_byMark = cm
+            stopifnot(names(res$color_mapping_byMark) == names(cm))
+            res$color_mapping_byMark = cm
         }else if(input$selGlobalColoring == "both"){
-            stopifnot(names(DATA()$color_mapping_byMark_byWide) == names(cm))
-            DATA()$color_mapping_byMark_byWide = cm
+            stopifnot(names(res$color_mapping_byMark_byWide) == names(cm))
+            res$color_mapping_byMark_byWide = cm
         }else if(input$selGlobalColoring == "cell"){
-            stopifnot(names(DATA()$color_mapping_byMark_byCell) == names(cm))
-            DATA()$color_mapping_byMark_byCell = cm
+            stopifnot(names(res$color_mapping_byMark_byCell) == names(cm))
+            res$color_mapping_byMark_byCell = cm
         }else{
             stop("unable to set_curr_col, unrecognized input$selGlobalColoring")
         }
-        cm
-        # browser()
+        DATA(res)
     }
     
     observeEvent({
@@ -682,7 +673,6 @@ shinyServer(function(input, output, session) {
     observeEvent({
         input$btnApplyCustomColors
     }, {
-        browser()
         cm = get_curr_col()
         cm_new = fetch_color_picker_ui(names(cm), input)
         set_curr_col(cm_new)
