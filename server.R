@@ -206,29 +206,10 @@ shinyServer(function(input, output, session) {
                             limits = c(0, 1)
                         ) +
                         coord_fixed(xlim = xrng, ylim = yrng, ratio = diff(xrng)/diff(yrng)) +
-                        # coord_cartesian(xlim = xrng, ylim = yrng) +
                         facet_wrap("variable") +
                         labs(color = "difference",
                              fill = paste("min of", colnames(corr_dt)[5],
                                           "\nand", colnames(corr_dt)[6]))
-                    
-                    # p = ggplot(corr_dt, aes(x = tx, y = ty, color = diff)) +
-                    #     geom_point(size = point_size) + 
-                    #     scale_color_gradientn(colors = c("blue", "white", "red"), 
-                    #                           breaks = c(-1, -.5, 0, .5, 1),
-                    #                           labels = c(colnames(corr_dt)[5], "", "-", "", colnames(corr_dt)[6]),
-                    #                           limits = c(-1, 1)) +
-                    #     coord_cartesian(xlim = xrng, ylim = yrng) +
-                    #     labs(color = "difference")
-                    # 
-                    # ggplot(corr_dt, aes(x = tx, y = ty, color = agree)) +
-                    #     geom_point(size = point_size) + 
-                    #     scale_color_gradientn(colors = c("blue", "white", "red"), 
-                    #                           breaks = c(-1, -.5, 0, .5, 1),
-                    #                           labels = c(colnames(corr_dt)[5], "", "-", "", colnames(corr_dt)[6]),
-                    #                           limits = c(-1, 1)) +
-                    #     coord_cartesian(xlim = xrng, ylim = yrng) +
-                    #     labs(color = "difference")
                 }else{
                     nc = ceiling(sqrt(length(input$selMarks)))
                     p = ggplot(
@@ -250,20 +231,6 @@ shinyServer(function(input, output, session) {
                 geom_density2d() + 
                 facet_wrap("tall_var") 
         }else if(typ == GLOBAL_VIEW_PROFILES_FAST){
-            # if(input$selGlobalColoring == "mark"){
-            #     tmp = unique(DATA()$profile_dt[, .(wide_var, mark)])
-            #     cm = DATA()$color_mapping_byMark[tmp$mark]
-            #     names(cm) = tmp$wide_var    
-            # }else if(input$selGlobalColoring == "both"){
-            #     # brows er()
-            #     # tmp = unique(DATA()$profile_dt[, .(wide_var, cell, mark)])
-            #     cm = DATA()$color_mapping_byMark_byWide[unique(DATA()$profile_dt$wide_var)]
-            #     names(cm) = unique(DATA()$profile_dt$wide_var)
-            # }else{
-            #     tmp = unique(DATA()$profile_dt[, .(wide_var, cell)])
-            #     cm = DATA()$color_mapping_byMark_byCell[tmp$cell]
-            #     names(cm) = tmp$wide_var    
-            # }
             cm = get_curr_col()
             p = stsPlotSummaryProfiles(DATA()$profile_dt[id %in% in_view_id, ],
                                        DATA()$tsne_dt[id %in% in_view_id, ], 
@@ -272,6 +239,7 @@ shinyServer(function(input, output, session) {
                                        x_points = input$numBins,
                                        xrng = xrng,
                                        yrng = yrng,
+                                       apply_norm = FALSE,
                                        ylim = DATA()$tylim,
                                        line_color_mapping = cm
             )
@@ -285,6 +253,7 @@ shinyServer(function(input, output, session) {
                                        x_points = input$numBins, 
                                        xrng = xrng,
                                        yrng = yrng,
+                                       apply_norm = FALSE,
                                        ylim = DATA()$tylim,
                                        line_color_mapping = cm,
                                        plot_type = "raster")
