@@ -16,6 +16,9 @@ suppressPackageStartupMessages({
 })
 
 source("functions.R")
+source("module_loading.R")
+source("module_plot_type.R")
+source("module_debug.R")
 
 load_libs_withProgress = function(libs, session){
     tmp.sink = suppressPackageStartupMessages({

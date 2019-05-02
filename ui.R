@@ -51,13 +51,35 @@ shinyUI(fluidPage(
                                              ),
                                              shinyjs::hidden(
                                                  tags$div(id = "app-tall-wide-sel",
-                                                          column(
+                                                          # shinyjs::hidden(
+                                                          column(id = "app-tall-sel",
                                                               width = 4,
                                                               uiOutput("ui_global_cells")
+                                                          # )
                                                           ),
-                                                          column(
+                                                          column(id = "app-wide-sel",
                                                               width = 4,
                                                               uiOutput("ui_global_marks")
+                                                          )
+                                                 )
+                                             ),
+                                             shinyjs::hidden(
+                                                 tags$div(id = "app-compare-sel",
+                                                          # shinyjs::hidden(
+                                                          column(#id = "app-tall-sel",
+                                                                 width = 6,
+                                                                 uiOutput("ui_compare_marks")
+                                                                 # )
+                                                          )
+                                                 )
+                                             ),
+                                             shinyjs::hidden(
+                                                 tags$div(id = "app-rgb-sel",
+                                                          # shinyjs::hidden(
+                                                          column(#id = "app-tall-sel",
+                                                              width = 8,
+                                                              uiOutput("ui_rgb_marks")
+                                                              # )
                                                           )
                                                  )
                                              )
