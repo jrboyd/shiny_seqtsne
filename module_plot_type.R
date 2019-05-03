@@ -6,7 +6,8 @@ server_plot_type = function(input,
                             UI_WIDEV,
                             plot_zoom_xrng,
                             plot_zoom_yrng,
-                            get_curr_col) {
+                            get_curr_col,
+                            GLOBAL_PLOT) {
     
     
     output$globalPlot <- renderPlot({
@@ -182,9 +183,11 @@ server_plot_type = function(input,
         }else{
             stop("unrecognized input$globalViewType ", typ)
         }
-        p +
+        p = p +
             theme_classic() + 
             labs(x = "", y = "")
+        GLOBAL_PLOT(p)
+        p
         
     })
     

@@ -112,7 +112,8 @@ shinyUI(fluidPage(
                                                                                       delayType = "debounce"), 
                                                                     click = "global_click")),
                                              actionButton("btnZoom", "Zoom"),
-                                             actionButton("btnReset", "Reset")
+                                             actionButton("btnReset", "Reset"),
+                                             actionButton("btnDlGlobal", "Download Image")
                                          )
                                      )
                                  )
@@ -141,6 +142,7 @@ shinyUI(fluidPage(
                                             click = "geneq_click"))
             )
             ),
+            tags$br(),
             sidebarLayout(
                 sidebarPanel(
                     fluidRow(
@@ -168,7 +170,8 @@ shinyUI(fluidPage(
                             width = 4,
                             withSpinner(plotOutput("detailPlot", 
                                                    width = "600px", 
-                                                   height = "600px"))        
+                                                   height = "600px")),
+                            actionButton("btnDlDetail", "Download Image")
                         )
                     )
                     

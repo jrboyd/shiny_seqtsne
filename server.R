@@ -28,6 +28,8 @@ shinyServer(function(input, output, session) {
     UI_MARKS = reactiveVal(NULL)
     UI_GENES = reactiveVal(NULL)
     DATA = reactiveVal(NULL)
+    GLOBAL_PLOT = reactiveVal(NULL)
+    DETAIL_PLOT = reactiveVal(NULL)
     
     server_loading(input, output, session, 
                    DATA, 
@@ -41,7 +43,8 @@ shinyServer(function(input, output, session) {
                      DATA,
                      UI_TALLV, UI_WIDEV,
                      plot_zoom_xrng, plot_zoom_yrng, 
-                     get_curr_col = custom_colors$get_curr_col)
+                     get_curr_col = custom_colors$get_curr_col,
+                     GLOBAL_PLOT)
     server_debug(input, output, session, 
                  plot_zoom_xrng, plot_zoom_yrng,
                  sel_zoom_xrng, sel_zoom_yrng)
@@ -142,7 +145,7 @@ shinyServer(function(input, output, session) {
             }
             
             prof_dt$id = factor(prof_dt$id, levels = samp_id)
-            ggplot(prof_dt, aes(x = x, y = y, color = wide_var, group = paste(id, cell, mark))) +
+            p = ggplot(prof_dt, aes(x = x, y = y, color = wide_var, group = paste(id, cell, mark))) +
                 geom_path() +
                 scale_color_manual(values = custom_colors$get_curr_col()) + 
                 facet_grid("cell~id") +
@@ -167,7 +170,7 @@ shinyServer(function(input, output, session) {
             # browser()
             agg_dt = prof_dt[, .(y = mean(y)), .(x, cell, mark, wide_var)]
             # ggplot(agg_dt, aes)
-            ggplot(agg_dt, aes(x = x, y = y, color = wide_var, group = paste(cell, mark))) +
+            p = ggplot(agg_dt, aes(x = x, y = y, color = wide_var, group = paste(cell, mark))) +
                 geom_path() +
                 scale_color_manual(values = custom_colors$get_curr_col()) + 
                 facet_grid("cell~.") +
@@ -177,6 +180,8 @@ shinyServer(function(input, output, session) {
         }else{
             stop("unrecognized input$sel_detail_type")
         }
+        DETAIL_PLOT(p)
+        p
     })
     
     # })
@@ -220,6 +225,7 @@ shinyServer(function(input, output, session) {
         showModal(
             modalDialog(title = "Dowload Gene Table", 
                         footer = fluidRow(
+                            actionButton("btnCancelModal", "Cancel"),
                             downloadButton("dlCsv", label = "Download csv"),
                             downloadButton("dlXlsx", label = "Download xlsx")
                         ),
@@ -248,8 +254,6 @@ shinyServer(function(input, output, session) {
                 odt = gene_dt()[input$tableGenes_rows_all,]
             }
             fwrite(odt, file)
-            browser()
-            
             removeModal()
         }
     )
@@ -280,6 +284,114 @@ shinyServer(function(input, output, session) {
         paste(length(gene_dt()[input$tableGenes_rows_all,]$gene_name), "unique genes")
     })
     
+    observeEvent({
+        input$btnDlGlobal
+    },{
+        def_col = ifelse(is.null(input$colorSelection), 
+                         "99ccff55", 
+                         input$colorSelection)
+        showModal(modalDialog(
+            fluidRow(
+                radioButtons("selImgFormat", "Image Format", choices = c("png", "pdf")),
+                textInput("txtImgPrefix", "Prefix", value = "global_image"),
+                colourInput("colorSelection", "Selection Color", value = def_col, allowTransparent = TRUE),
+                numericInput("numImgWidth", "Width (in)", value = 6, min = 1, max = 20),
+                numericInput("numImgHeight", "Height (in)", value = 6, min = 1, max = 20),
+                numericInput("numImgDpi", "DPI", value = 150, min = 50, max = 600)
+            ),
+            title = "Save Current Global Image",
+            footer = fluidRow(
+                actionButton("btnCancelModal", label = "Cancel" ),
+                downloadButton("btnSaveGlobalImg")
+            )
+        ))
+    })
     
+    observeEvent({
+        input$selImgFormat
+    }, {
+        if(input$selImgFormat == "pdf"){
+            shinyjs::disable("numImgDpi")
+        }else{
+            shinyjs::enable("numImgDpi")
+        }
+    })
+    
+    observe({
+        req(input$btnCancelModal)
+        input$btnCancelModal
+        removeModal()
+    })
+    
+    output$btnSaveGlobalImg = downloadHandler(
+        filename = function(){
+            paste0(input$txtImgPrefix, ".", input$selImgFormat)
+        }, 
+        content = function(file){
+            p = GLOBAL_PLOT()
+            plot_rect = c(plot_zoom_xrng(), plot_zoom_yrng())
+            sel_rect = c(sel_zoom_xrng(), sel_zoom_yrng())
+            if(!all(plot_rect == sel_rect)){
+                box_col = input$colorSelection
+                if(nchar(box_col) == 7){
+                    box_col = paste0(box_col, "FF")
+                }
+                line_col = paste0(substr(box_col, 0, 7), "FF")
+                p = p + annotate("rect", 
+                                 xmin = sel_rect[1],
+                                 xmax = sel_rect[2],
+                                 ymin = sel_rect[3],
+                                 ymax = sel_rect[4],
+                                 fill = box_col,
+                                 color = line_col)
+            }
+            ggsave(
+                file,
+                plot = p,
+                units = "in",
+                width = input$numImgWidth,
+                height = input$numImgHeight,
+                dpi = input$numImgDpi
+            )
+            removeModal()
+        }
+    )
+    
+    observeEvent({
+        input$btnDlDetail
+    }, {
+        showModal(modalDialog(
+            fluidRow(
+                radioButtons("selImgFormat", "Image Format", choices = c("png", "pdf")),
+                textInput("txtImgPrefix", "Prefix", value = "detail_image"),
+                numericInput("numImgWidth", "Width (in)", value = 6, min = 1, max = 20),
+                numericInput("numImgHeight", "Height (in)", value = 6, min = 1, max = 20),
+                numericInput("numImgDpi", "DPI", value = 150, min = 50, max = 600)
+            ),
+            title = "Save Current Detail Image",
+            footer = fluidRow(
+                actionButton("btnCancelModal", label = "Cancel" ),
+                downloadButton("btnSaveDetailImg")
+            )
+        ))
+    })
+    
+    output$btnSaveDetailImg = downloadHandler(
+        filename = function(){
+            paste0(input$txtImgPrefix, ".", input$selImgFormat)
+        }, 
+        content = function(file){
+            p = DETAIL_PLOT()
+            ggsave(
+                file,
+                plot = p,
+                units = "in",
+                width = input$numImgWidth,
+                height = input$numImgHeight,
+                dpi = input$numImgDpi
+            )
+            removeModal()
+        }
+    )
 })
 
