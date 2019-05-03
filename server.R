@@ -36,10 +36,12 @@ shinyServer(function(input, output, session) {
                    UI_CELLS,
                    UI_MARKS,
                    UI_GENES)
+    custom_colors = server_custom_colors(input, ouptut, session, DATA)
     server_plot_type(input, output, session, 
                      DATA,
                      UI_TALLV, UI_WIDEV,
-                     plot_zoom_xrng, plot_zoom_yrng)
+                     plot_zoom_xrng, plot_zoom_yrng, 
+                     get_curr_col = custom_colors$get_curr_col)
     server_debug(input, output, session, 
                  plot_zoom_xrng, plot_zoom_yrng,
                  sel_zoom_xrng, sel_zoom_yrng)
@@ -142,7 +144,7 @@ shinyServer(function(input, output, session) {
             prof_dt$id = factor(prof_dt$id, levels = samp_id)
             ggplot(prof_dt, aes(x = x, y = y, color = wide_var, group = paste(id, cell, mark))) +
                 geom_path() +
-                scale_color_manual(values = get_curr_col()) + 
+                scale_color_manual(values = custom_colors$get_curr_col()) + 
                 facet_grid("cell~id") +
                 scale_x_continuous(breaks = 0) +
                 labs(x = "relative position", y = "fold-enrichment") +
@@ -167,7 +169,7 @@ shinyServer(function(input, output, session) {
             # ggplot(agg_dt, aes)
             ggplot(agg_dt, aes(x = x, y = y, color = wide_var, group = paste(cell, mark))) +
                 geom_path() +
-                scale_color_manual(values = get_curr_col()) + 
+                scale_color_manual(values = custom_colors$get_curr_col()) + 
                 facet_grid("cell~.") +
                 scale_x_continuous(breaks = 0) +
                 labs(x = "relative position", y = "fold-enrichment") +
@@ -278,66 +280,6 @@ shinyServer(function(input, output, session) {
         paste(length(gene_dt()[input$tableGenes_rows_all,]$gene_name), "unique genes")
     })
     
-    observeEvent({
-        input$btnCustomColors
-    }, {
-        curr_col = get_curr_col()
-        showModal(modalDialog(
-            gen_color_picker_ui(
-                picker_names = names(curr_col), 
-                initial_colors = curr_col
-            ),
-            title = "Customize Color", 
-            footer = fluidRow(
-                actionButton("btnCancelCustomColors", label = "Cancel"),
-                actionButton("btnApplyCustomColors", label = "OK")
-            )
-        ))
-    })
     
-    get_curr_col = function(){
-        if(input$selGlobalColoring == "mark"){
-            cm = DATA()$color_mapping_byMark
-        }else if(input$selGlobalColoring == "cell"){
-            cm = DATA()$color_mapping_byCell
-        }else if(input$selGlobalColoring == "both"){
-            cm = DATA()$color_mapping_byBoth
-        }else{
-            stop("unable to get_curr_col, unrecognized input$selGlobalColoring")
-        }
-        cm
-    }
-    
-    set_curr_col = function(cm){
-        res = DATA()
-        if(input$selGlobalColoring == "mark"){
-            stopifnot(names(res$color_mapping_byMark) == names(cm))
-            res$color_mapping_byMark = cm
-        }else if(input$selGlobalColoring == "cell"){
-            stopifnot(names(res$color_mapping_byCell) == names(cm))
-            res$color_mapping_byCell = cm
-        }else if(input$selGlobalColoring == "both"){
-            stopifnot(names(res$color_mapping_byBoth) == names(cm))
-            res$color_mapping_byBoth = cm
-        }else{
-            stop("unable to set_curr_col, unrecognized input$selGlobalColoring")
-        }
-        DATA(res)
-    }
-    
-    observeEvent({
-        input$btnCancelCustomColors
-    }, {
-        removeModal()
-    })
-    
-    observeEvent({
-        input$btnApplyCustomColors
-    }, {
-        cm = get_curr_col()
-        cm_new = fetch_color_picker_ui(names(cm), input)
-        set_curr_col(cm_new)
-        removeModal()
-    })
 })
 

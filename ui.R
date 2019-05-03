@@ -113,16 +113,7 @@ shinyUI(fluidPage(
                                                                     click = "global_click")),
                                              actionButton("btnZoom", "Zoom"),
                                              actionButton("btnReset", "Reset")
-                                         )#,
-                                         # fluidRow(
-                                         #     plotOutput("genePlot", width = "400px", height = "400px"),
-                                         #     plotOutput("profilePlot", width = "400px", height = "400px")
-                                         # ),
-                                         # fluidRow(
-                                         #     plotOutput("pairArrows", width = "400px", height = "400px"),
-                                         #     plotOutput("pairKey", width = "400px", height = "400px")
-                                         # 
-                                         # )
+                                         )
                                      )
                                  )
             ), 

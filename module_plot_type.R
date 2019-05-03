@@ -1,4 +1,13 @@
-server_plot_type = function(input, output, session, DATA, UI_TALLV, UI_WIDEV, plot_zoom_xrng, plot_zoom_yrng){
+server_plot_type = function(input,
+                            output,
+                            session,
+                            DATA,
+                            UI_TALLV,
+                            UI_WIDEV,
+                            plot_zoom_xrng,
+                            plot_zoom_yrng,
+                            get_curr_col) {
+    
     
     output$globalPlot <- renderPlot({
         req(input$selCells)
@@ -75,7 +84,18 @@ server_plot_type = function(input, output, session, DATA, UI_TALLV, UI_WIDEV, pl
                     geom_point(size = point_size)
             }
         }else if(typ == GLOBAL_VIEW_POINTS_COMPARISON){
-            plot_compare(DATA()$agg_dt, in_view_id, input$selCells, input$selCompare)
+            req(input$selCompare1)
+            req(input$selCompare2)
+            p = plot_agree_diff(
+                p_dt = DATA()$agg_dt,
+                sel_id = in_view_id,
+                sel_tall = input$selCells,
+                sel_wide1 = input$selCompare1,
+                sel_wide2 = input$selCompare2,
+                point_size = point_size,
+                xrng = xrng,
+                yrng = yrng
+            )
             # corr_dt = dcast(
             #     DATA()$agg_dt[id %in% in_view_id][tall_var %in% input$selCells & wide_var %in% input$selCompare],
             #     id+tall_var+tx+ty~wide_var, value.var = "value")
@@ -112,6 +132,21 @@ server_plot_type = function(input, output, session, DATA, UI_TALLV, UI_WIDEV, pl
             #     labs(color = "difference",
             #          fill = paste("min of", colnames(corr_dt)[5],
             #                       "\nand", colnames(corr_dt)[6]))
+        }else if(typ == GLOBAL_VIEW_POINTS_RGB){
+            req(input$selCompareR)
+            req(input$selCompareG)
+            req(input$selCompareB)
+            p = plot_rgb(
+                p_dt = DATA()$agg_dt,
+                sel_id = in_view_id,
+                sel_tall = input$selCells,
+                sel_wideR = input$selCompareR,
+                sel_wideG = input$selCompareG,
+                sel_wideB = input$selCompareB,
+                point_size = point_size,
+                xrng = xrng,
+                yrng = yrng
+            )
         }else if(typ == GLOBAL_VIEW_DENSITY){
             p = ggplot(DATA()$tsne_dt[tall_var %in% input$selCells], aes(x = tx, y = ty)) +
                 coord_cartesian(xlim = xrng, ylim = yrng) +
@@ -144,6 +179,8 @@ server_plot_type = function(input, output, session, DATA, UI_TALLV, UI_WIDEV, pl
                                        ylim = DATA()$tylim,
                                        line_color_mapping = cm,
                                        plot_type = "raster")
+        }else{
+            stop("unrecognized input$globalViewType ", typ)
         }
         p +
             theme_classic() + 
@@ -204,27 +241,31 @@ server_plot_type = function(input, output, session, DATA, UI_TALLV, UI_WIDEV, pl
     
     output$ui_rgb_marks = renderUI({ #TODO at least 1 up to 3
         req(UI_WIDEV())
+        wide_v = c(UI_WIDEV(), "none")
+        qr = min(length(wide_v), 1)
+        qg = min(length(wide_v), 2)
+        qb = min(length(wide_v), 3)
         fluidRow(
             column(width = 4, 
                    radioButtons(
                        "selCompareR",
                        "Select R",
-                       choices = UI_WIDEV(),
-                       selected = UI_WIDEV()[1]
+                       choices = wide_v,
+                       selected = wide_v[qr]
                    )),
             column(width = 4,
                    radioButtons(
                        "selCompareG",
                        "Select G",
-                       choices = UI_WIDEV(),
-                       selected = UI_WIDEV()[2]
+                       choices = wide_v,
+                       selected = wide_v[qg]
                    )),
             column(width = 4,
                    radioButtons(
                        "selCompareB",
                        "Select B",
-                       choices = UI_WIDEV(),
-                       selected = UI_WIDEV()[3]
+                       choices = wide_v,
+                       selected = wide_v[qb]
                    ))
             
         )
@@ -256,19 +297,60 @@ server_plot_type = function(input, output, session, DATA, UI_TALLV, UI_WIDEV, pl
     
 }
 
-plot_compare = function(p_dt, sel_id, sel_tall, sel_wide){
-    corr_dt = dcast(
-        p_dt[id %in% sel_id][tall_var %in% sel_tall & wide_var %in% sel_wide],
-        id+tall_var+tx+ty~wide_var, value.var = "value")
-    corr_dt$difference = corr_dt[, 6] - corr_dt[,5]
-    corr_dt$agreement = pmin(corr_dt[, 6], corr_dt[,5])
-    val_dt = melt(corr_dt[, .(tx, ty, difference, agreement)],
-                  id.vars = c("tx", "ty"),
-                  measure.vars = c("difference", "agreement"))
+plot_rgb = function(p_dt,
+                    sel_id,
+                    sel_tall,
+                    sel_wideR,
+                    sel_wideG,
+                    sel_wideB,
+                    point_size,
+                    xrng,
+                    yrng
+) {
+    p_dt = p_dt[id %in% sel_id]
+    sel_wide = unique(c(sel_wideR, sel_wideG, sel_wideB))
+    sel_wide = sel_wide[sel_wide != "none"]
+    p_dt = p_dt[tall_var %in% sel_tall &
+                    wide_var %in% sel_wide]
+    compare_dt = dcast(p_dt, id + tall_var + tx + ty ~ wide_var, value.var = "value")
+    compare_dt$none = 0
+    compare_dt[, color := rgb(get(sel_wideR), get(sel_wideG), get(sel_wideB))]
     p = ggplot() +
-        geom_point(data = val_dt[variable == "difference"],
-                   aes(x = tx, y = ty, color = value),
-                   size = point_size) +
+        geom_point(
+            data = compare_dt,
+            aes(x = tx, y = ty, color = color),
+            size = point_size
+        ) +
+        scale_color_identity() +
+        coord_fixed(xlim = xrng,
+                    ylim = yrng,
+                    ratio = diff(xrng) / diff(yrng)) +
+        facet_wrap("tall_var") 
+}
+
+plot_agree_diff = function(p_dt,
+                           sel_id,
+                           sel_tall,
+                           sel_wide1,
+                           sel_wide2,
+                           point_size,
+                           xrng,
+                           yrng) {
+    compare_dt = dcast(p_dt[id %in% sel_id][tall_var %in% sel_tall &
+                                             wide_var %in% c(sel_wide1, sel_wide2)],
+                    id + tall_var + tx + ty ~ wide_var, value.var = "value")
+    compare_dt$difference = compare_dt[[sel_wide2]] - compare_dt[[sel_wide1]]
+    compare_dt$agreement = pmin(compare_dt[[sel_wide2]], compare_dt[[sel_wide1]])
+    val_dt = melt(
+        compare_dt[, .(tx, ty, difference, agreement)],
+        id.vars = c("tx", "ty"),
+        measure.vars = c("difference", "agreement")
+    )
+    p = ggplot() +
+        geom_point(
+            data = val_dt[variable == "difference"],
+            aes(x = tx, y = ty, color = value),
+            size = point_size) +
         geom_point(
             data = val_dt[variable == "agreement"],
             aes(x = tx, y = ty, fill = value),
@@ -278,8 +360,8 @@ plot_compare = function(p_dt, sel_id, sel_tall, sel_wide){
         ) +
         scale_color_gradientn(
             colors = c("blue", "white", "red"),
-            breaks = c(-1,-.5, 0, .5, 1),
-            labels = c(colnames(corr_dt)[5], "", "-", "", colnames(corr_dt)[6]),
+            breaks = c(-1, -.5, 0, .5, 1),
+            labels = c(sel_wide1, "", "-", "", sel_wide2),
             limits = c(-1, 1)
         ) +
         scale_fill_gradientn(
@@ -288,9 +370,11 @@ plot_compare = function(p_dt, sel_id, sel_tall, sel_wide){
             labels = c(0, .5, 1),
             limits = c(0, 1)
         ) +
-        coord_fixed(xlim = xrng, ylim = yrng, ratio = diff(xrng)/diff(yrng)) +
+        coord_fixed(xlim = xrng,
+                    ylim = yrng,
+                    ratio = diff(xrng) / diff(yrng)) +
         facet_wrap("variable") +
         labs(color = "difference",
-             fill = paste("min of", colnames(corr_dt)[5],
-                          "\nand", colnames(corr_dt)[6]))
+             fill = paste("min of", sel_wide1,
+                          "\nand", sel_wide2))
 }
