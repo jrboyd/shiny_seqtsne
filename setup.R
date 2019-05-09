@@ -5,6 +5,7 @@ rm(list=ls())
 
 suppressPackageStartupMessages({
     library(shiny)
+    library(DT)
     library(shinyjs)
     library(magrittr)
     library(shinycssloaders)
@@ -61,7 +62,7 @@ D_BCELL = "B cell bivalency"
 D_MSC_TIME = "MSC timecourse bivalency"
 D_WALDRON_CONSENSUS = "Waldron hESC+CD34 consensus"
 UI_DATASETS = c(D_EXAMPLE, D_WALDRON_CONSENSUS, D_HESC_CD34, D_BCELL, D_MSC_TIME)
-data_dir = "~/ShinyApps/shiny_seqtsne"
+data_dir = getwd()
 UI_DATASOURCES = c(file.path(data_dir, "dataset_scripts/generate_example.R"),
                    file.path(data_dir, "dataset_scripts/generate_data_hESC_and_CD34_consensus.R"),
                    file.path(data_dir, "dataset_scripts/generate_data_hESC_and_CD34_biv_wide_full.R"),
@@ -149,6 +150,15 @@ load_dataset = function(src){
         tylim = range(profile_dt$y)
     }
     
+    if(!exists("selectors") || is.null(selectors)){
+        selectors = list()
+    }
+    # browser()
+    annotation_dt = unique(annotation_dt)
+    wagg_dt = dcast(agg_dt[, .(id, wide_var, value)], id~wide_var, value.var = "value")
+    def_sel = list("Gene Annotation" = annotation_dt[distance < 1e5][order(distance)], "Aggregated Signals" = wagg_dt)
+    selectors = c(def_sel, selectors)
+    
     setkey(profile_dt, "id")
     setkey(tsne_dt, "id")
     res = list(
@@ -161,7 +171,8 @@ load_dataset = function(src){
         color_mapping_byMark = color_mapping,
         color_mapping_byCell = color_mapping.alt,
         color_mapping_byBoth = color_mapping.full,
-        tylim = tylim
+        tylim = tylim,
+        selectors = selectors
     )
     res
 }

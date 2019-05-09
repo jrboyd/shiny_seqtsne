@@ -1,7 +1,8 @@
 library(BiocFileCache)
 bfc = BiocFileCache::BiocFileCache()
 
-rname = "waldron_tsne_wide"
+# rname = "waldron_tsne_wide"
+rname = "waldron_tsne_gene_driven"
 
 bfc = BiocFileCache::BiocFileCache()
 load(bfcrpath(bfc, rname))
@@ -19,6 +20,8 @@ remove(res)
 
 agg_dt = merge(agg_dt, tsne_dt)
 agg_dt[, value := y]
-
 config_dt[, c("cell", "mark") := tstrsplit(basename(file), "_", keep = 1:2)]
+config_dt[, bam_file := sub("_FE.bw", ".bam", file)]
 # browser()
+
+# sapply(config_dt$bam_file, seqsetvis:::getReadLength, query_gr = qgr)

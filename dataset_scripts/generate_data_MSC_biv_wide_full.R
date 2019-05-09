@@ -5,7 +5,8 @@ library(GenomicRanges)
 library(cowplot)
 bfc = BiocFileCache::BiocFileCache()
 
-rname = "MSC_biv_wide_full"
+# rname = "MSC_biv_wide_full"
+rname = "MSC_biv_gene_driven"
 
 res = bfcif(bfc,
             force_overwrite = FALSE,

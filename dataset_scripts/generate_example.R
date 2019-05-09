@@ -36,7 +36,7 @@ res = bfcif(bfc,
                 cfg_dt = seqtsne::ex_cfg_dt
                 # colnames(cfg_dt)[1] = "files"
                 cfg_dt[, file := bw_files]
-                cfg_dt = merge(cfg_dt, seqtsne::ex_cfg_dt.bam[, .(bam_files, tall_var, wide_var)])
+                cfg_dt = merge(cfg_dt, seqtsne::ex_cfg_dt.bam[, .(bam_file = bam_files, tall_var, wide_var)])
                 cfg_dt[, cell := tall_var]
                 cfg_dt[, mark := wide_var]
                 cfg_dt[, tall_var := "-"]
