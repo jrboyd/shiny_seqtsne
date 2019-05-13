@@ -59,15 +59,30 @@ message(getwd())
 D_EXAMPLE = "example"
 D_HESC_CD34 = "hESC and CD34 bivalency"
 D_BCELL = "B cell bivalency"
-D_MSC_TIME = "MSC timecourse bivalency"
+D_MSC_TIME = "MSC timecourse bivalency peak-based"
+D_MSC_TIME2 = "MSC timecourse full gene-based"
+D_MSC_TIME3 = "MSC timecourse histone gene-based"
+D_MSC_TIME4 = "MSC timecourse bivalency gene-based"
 D_WALDRON_CONSENSUS = "Waldron hESC+CD34 consensus"
-UI_DATASETS = c(D_EXAMPLE, D_WALDRON_CONSENSUS, D_HESC_CD34, D_BCELL, D_MSC_TIME)
+UI_DATASETS = c(
+    D_EXAMPLE,
+    D_WALDRON_CONSENSUS,
+    D_HESC_CD34,
+    D_BCELL,
+    D_MSC_TIME,
+    D_MSC_TIME2,
+    D_MSC_TIME3,
+    D_MSC_TIME4
+)
 data_dir = getwd()
 UI_DATASOURCES = c(file.path(data_dir, "dataset_scripts/generate_example.R"),
                    file.path(data_dir, "dataset_scripts/generate_data_hESC_and_CD34_consensus.R"),
                    file.path(data_dir, "dataset_scripts/generate_data_hESC_and_CD34_biv_wide_full.R"),
                    file.path(data_dir, "dataset_scripts/generate_data_Bcell_biv_wide_full.R"),
-                   file.path(data_dir, "dataset_scripts/generate_data_MSC_biv_wide_full.R"))
+                   file.path(data_dir, "dataset_scripts/generate_data_MSC_biv_wide_full.R"),
+                   file.path(data_dir, "dataset_scripts/generate_data_MSC_full_gene_driven.R"),
+                   file.path(data_dir, "dataset_scripts/generate_data_MSC_histones_gene_driven.R"),
+                   file.path(data_dir, "dataset_scripts/generate_data_MSC_biv_gene_driven.R"))
 stopifnot(file.exists(UI_DATASOURCES))
 names(UI_DATASOURCES)= UI_DATASETS
 
@@ -156,7 +171,7 @@ load_dataset = function(src){
     # browser()
     annotation_dt = unique(annotation_dt)
     wagg_dt = dcast(agg_dt[, .(id, wide_var, value)], id~wide_var, value.var = "value")
-    def_sel = list("Gene Annotation" = annotation_dt[distance < 1e5][order(distance)], "Aggregated Signals" = wagg_dt)
+    def_sel = list("Aggregated Signals" = wagg_dt, "Gene Annotation" = annotation_dt[distance < 1e5][order(distance)])
     selectors = c(def_sel, selectors)
     
     setkey(profile_dt, "id")

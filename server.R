@@ -459,7 +459,6 @@ shinyServer(function(input, output, session) {
             df = data.frame("more than 5000 genes selected.")
         }else{
             df = data.frame("disabled")
-            # # browser()
             # # library(topGO)
             # # sampleGOdata <- new("topGOdata",
             # #                     description = "Simple session", ontology = "BP",
@@ -474,7 +473,6 @@ shinyServer(function(input, output, session) {
             # })
             # go_dt = as.data.table(go_res$results)
             # df = go_dt[FWER_overrep < .05]
-            # # browser()
         }
         
         go_dt(df)
@@ -720,7 +718,7 @@ shinyServer(function(input, output, session) {
         dt = dt[id %in% zoom_id()]
         
         rnd_cn = colnames(dt)[sapply(dt, is.numeric)]
-        
+        tab_set_ids(dt)
         dt = DT::datatable(dt, 
                       extensions = c('Scroller'),
                       options = list(pageLength = 15,
@@ -732,6 +730,113 @@ shinyServer(function(input, output, session) {
         dt
     }, server = TRUE)
 
+    sel_set_ids = reactiveVal(NULL)
+    tab_set_ids = reactiveVal(NULL)
+    
+    observeEvent({
+        input$tableSelect_rows_all
+    }, {
+        ids = tab_set_ids()[input$tableSelect_rows_all]$id
+        sel_set_ids(ids)
+    })
+    
+    output$setPreviewGlobal = renderPlot({
+        pdt = DATA()$tsne_dt
+        plot_rect = c(plot_zoom_xrng(), plot_zoom_yrng())
+        
+        xrng = plot_zoom_xrng()
+        yrng = plot_zoom_yrng()
+        frac_shown = max(c(diff(xrng), diff(yrng)))
+        point_size = .1 / frac_shown
+        # in_view_id =  pdt[
+        #     tx >= min(xrng) & 
+        #         tx <= max(xrng) & 
+        #         ty >= min(yrng) & 
+        #         ty <= max(yrng)]$id
+        in_view_id = pdt$id
+        if(!input$selNumPlotted == "all"){
+            set.seed(0)
+            in_view_id = sampleCap(in_view_id, as.numeric(input$selNumPlotted))
+        }
+        in_view_id = union(in_view_id, sampleCap(sel_set_ids()))
+        pdt = pdt[id %in% in_view_id]
+        sel_rect = c(sel_zoom_xrng(), sel_zoom_yrng())
+        
+        pdt$group = "out"
+        pdt[id %in% sel_set_ids(), group := "in"]
+        
+        p = ggplot() +
+            annotate(
+                "rect",
+                xmin = xrng[1],
+                xmax = xrng[2],
+                ymin = yrng[1],
+                ymax = yrng[2],
+                fill = "lightblue",
+                color = NA
+            ) +
+            annotate(
+                "rect",
+                xmin = sel_rect[1],
+                xmax = sel_rect[2],
+                ymin = sel_rect[3],
+                ymax = sel_rect[4],
+                fill = "green",
+                color = NA
+            ) +
+            geom_point(data = pdt[group == "out"], aes(x = tx, y = ty), color = "gray") +
+            geom_point(data = pdt[group == "in"], aes(x = tx, y = ty), color = "red") +
+            coord_cartesian(xlim = c(-.5, .5), ylim = c(-.5, .5))
+        p
+    })
+    
+    output$setPreviewZoom = renderPlot({
+        pdt = DATA()$tsne_dt
+        plot_rect = c(plot_zoom_xrng(), plot_zoom_yrng())
+        
+        xrng = plot_zoom_xrng()
+        yrng = plot_zoom_yrng()
+        frac_shown = max(c(diff(xrng), diff(yrng)))
+        point_size = .1 / frac_shown
+        in_view_id =  pdt[
+            tx >= min(xrng) & 
+                tx <= max(xrng) & 
+                ty >= min(yrng) & 
+                ty <= max(yrng)]$id
+        if(!input$selNumPlotted == "all"){
+            set.seed(0)
+            in_view_id = sampleCap(in_view_id, as.numeric(input$selNumPlotted))
+        }
+        pdt = pdt[id %in% in_view_id]
+        sel_rect = c(sel_zoom_xrng(), sel_zoom_yrng())
+        
+        pdt$group = "out"
+        pdt[id %in% sel_set_ids(), group := "in"]
+        
+        p = ggplot() +
+            annotate(
+                "rect",
+                xmin = xrng[1],
+                xmax = xrng[2],
+                ymin = yrng[1],
+                ymax = yrng[2],
+                fill = "lightblue",
+                color = NA
+            ) +
+            annotate(
+                "rect",
+                xmin = sel_rect[1],
+                xmax = sel_rect[2],
+                ymin = sel_rect[3],
+                ymax = sel_rect[4],
+                fill = "green",
+                color = NA
+            ) +
+            geom_point(data = pdt[group == "out"], aes(x = tx, y = ty), color = "gray") +
+            geom_point(data = pdt[group == "in"], aes(x = tx, y = ty), color = "red") +
+            coord_cartesian(xlim = xrng, ylim = yrng)
+        p
+    })
 # observeEvent({
 #     input$detail_file_type
 # }, {
