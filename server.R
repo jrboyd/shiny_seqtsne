@@ -493,8 +493,8 @@ shinyServer(function(input, output, session) {
     output$geneQPlot = renderPlot({
         max_dist = 3e4
         gene_text = input$textGeneQ
-        gene_list = strsplit(toupper(gene_text), "[ ,]+")[[1]]
-        hit_id = unique(DATA()$annotation_dt[gene_name %in% gene_list & distance <= max_dist]$id)
+        gene_list = strsplit(gene_text, "[ ,]+")[[1]]
+        hit_id = unique(DATA()$annotation_dt[toupper(gene_name) %in% toupper(gene_list) & distance <= max_dist]$id)
         ggplot() + 
             annotate("point", x =  DATA()$tsne_dt$tx, y = DATA()$tsne_dt$ty, size = .2, color = "gray") +
             annotate("point", x =  DATA()$tsne_dt[id %in% hit_id]$tx, y = DATA()$tsne_dt[id %in% hit_id]$ty, size = .2, color = "red")

@@ -11,8 +11,8 @@ server_plot_type = function(input,
     
     
     output$globalPlot <- renderPlot({
-        req(input$selCells)
-        req(input$selMarks)
+        req(input$selTallVars)
+        req(input$selWideVars)
         typ = input$globalViewType
         
         xrng = plot_zoom_xrng()
@@ -28,59 +28,19 @@ server_plot_type = function(input,
             set.seed(0)
             in_view_id = sampleCap(in_view_id, as.numeric(input$selNumPlotted))
         }
-        # tp = 
         if(typ == GLOBAL_VIEW_POINTS){
-            if(length(input$selMarks) >= 1){
-                #     if(length(input$selMarks) == 2){
-                #         corr_dt = dcast(
-                #             DATA()$agg_dt[id %in% in_view_id][tall_var %in% input$selCells & wide_var %in% input$selMarks],
-                #             id+tall_var+tx+ty~wide_var, value.var = "value")
-                #         corr_dt$difference = corr_dt[, 6] - corr_dt[,5]
-                #         corr_dt$agreement = pmin(corr_dt[, 6], corr_dt[,5])
-                #         val_dt = melt(corr_dt[, .(tx, ty, difference, agreement)],
-                #                       id.vars = c("tx", "ty"),
-                #                       measure.vars = c("difference", "agreement"))
-                #         p = ggplot() +
-                #             geom_point(data = val_dt[variable == "difference"],
-                #                        aes(x = tx, y = ty, color = value),
-                #                        size = point_size) +
-                #             geom_point(
-                #                 data = val_dt[variable == "agreement"],
-                #                 aes(x = tx, y = ty, fill = value),
-                #                 size = point_size * 1.5,
-                #                 shape = 21,
-                #                 color = "#00000000"
-                #             ) +
-                #             scale_color_gradientn(
-                #                 colors = c("blue", "white", "red"),
-                #                 breaks = c(-1,-.5, 0, .5, 1),
-                #                 labels = c(colnames(corr_dt)[5], "", "-", "", colnames(corr_dt)[6]),
-                #                 limits = c(-1, 1)
-                #             ) +
-                #             scale_fill_gradientn(
-                #                 colors = c("gray80", "gray0"),
-                #                 breaks = c(0, .5, 1),
-                #                 labels = c(0, .5, 1),
-                #                 limits = c(0, 1)
-                #             ) +
-                #             coord_fixed(xlim = xrng, ylim = yrng, ratio = diff(xrng)/diff(yrng)) +
-                #             facet_wrap("variable") +
-                #             labs(color = "difference",
-                #                  fill = paste("min of", colnames(corr_dt)[5],
-                #                               "\nand", colnames(corr_dt)[6]))
-                #     }else{
-                nc = ceiling(sqrt(length(input$selMarks)))
+            if(length(input$selWideVars) >= 1){
+                nc = ceiling(sqrt(length(input$selWideVars)))
                 p = ggplot(
-                    DATA()$agg_dt[id %in% in_view_id][tall_var %in% input$selCells & wide_var %in% input$selMarks], 
+                    DATA()$agg_dt[id %in% in_view_id][tall_var %in% input$selTallVars & wide_var %in% input$selWideVars], 
                     aes(x = tx, y = ty, color = value)) +
                     geom_point(size = point_size) +  
-                    # coord_cartesian(xlim = xrng, ylim = yrng) +
+                    scale_color_viridis_c() +
                     coord_fixed(xlim = xrng, ylim = yrng, ratio = diff(xrng)/diff(yrng)) +
                     facet_wrap("wide_var", ncol = nc)    
                 # }
             }else{
-                p = ggplot(DATA()$tsne_dt[id %in% in_view_id][tall_var %in% input$selCells], aes(x = tx, y = ty)) +
-                    # coord_cartesian(xlim = xrng, ylim = yrng) +
+                p = ggplot(DATA()$tsne_dt[id %in% in_view_id][tall_var %in% input$selTallVars], aes(x = tx, y = ty)) +
                     coord_fixed(xlim = xrng, ylim = yrng, ratio = diff(xrng)/diff(yrng)) +
                     geom_point(size = point_size)
             }
@@ -90,49 +50,13 @@ server_plot_type = function(input,
             p = plot_agree_diff(
                 p_dt = DATA()$agg_dt,
                 sel_id = in_view_id,
-                sel_tall = input$selCells,
+                sel_tall = input$selTallVars,
                 sel_wide1 = input$selCompare1,
                 sel_wide2 = input$selCompare2,
                 point_size = point_size,
                 xrng = xrng,
                 yrng = yrng
             )
-            # corr_dt = dcast(
-            #     DATA()$agg_dt[id %in% in_view_id][tall_var %in% input$selCells & wide_var %in% input$selCompare],
-            #     id+tall_var+tx+ty~wide_var, value.var = "value")
-            # corr_dt$difference = corr_dt[, 6] - corr_dt[,5]
-            # corr_dt$agreement = pmin(corr_dt[, 6], corr_dt[,5])
-            # val_dt = melt(corr_dt[, .(tx, ty, difference, agreement)],
-            #               id.vars = c("tx", "ty"),
-            #               measure.vars = c("difference", "agreement"))
-            # p = ggplot() +
-            #     geom_point(data = val_dt[variable == "difference"],
-            #                aes(x = tx, y = ty, color = value),
-            #                size = point_size) +
-            #     geom_point(
-            #         data = val_dt[variable == "agreement"],
-            #         aes(x = tx, y = ty, fill = value),
-            #         size = point_size * 1.5,
-            #         shape = 21,
-            #         color = "#00000000"
-            #     ) +
-            #     scale_color_gradientn(
-            #         colors = c("blue", "white", "red"),
-            #         breaks = c(-1,-.5, 0, .5, 1),
-            #         labels = c(colnames(corr_dt)[5], "", "-", "", colnames(corr_dt)[6]),
-            #         limits = c(-1, 1)
-            #     ) +
-            #     scale_fill_gradientn(
-            #         colors = c("gray80", "gray0"),
-            #         breaks = c(0, .5, 1),
-            #         labels = c(0, .5, 1),
-            #         limits = c(0, 1)
-            #     ) +
-            #     coord_fixed(xlim = xrng, ylim = yrng, ratio = diff(xrng)/diff(yrng)) +
-            #     facet_wrap("variable") +
-            #     labs(color = "difference",
-            #          fill = paste("min of", colnames(corr_dt)[5],
-            #                       "\nand", colnames(corr_dt)[6]))
         }else if(typ == GLOBAL_VIEW_POINTS_RGB){
             req(input$selCompareR)
             req(input$selCompareG)
@@ -140,7 +64,7 @@ server_plot_type = function(input,
             p = plot_rgb(
                 p_dt = DATA()$agg_dt,
                 sel_id = in_view_id,
-                sel_tall = input$selCells,
+                sel_tall = input$selTallVars,
                 sel_wideR = input$selCompareR,
                 sel_wideG = input$selCompareG,
                 sel_wideB = input$selCompareB,
@@ -149,7 +73,7 @@ server_plot_type = function(input,
                 yrng = yrng
             )
         }else if(typ == GLOBAL_VIEW_DENSITY){
-            p = ggplot(DATA()$tsne_dt[tall_var %in% input$selCells], aes(x = tx, y = ty)) +
+            p = ggplot(DATA()$tsne_dt[tall_var %in% input$selTallVars], aes(x = tx, y = ty)) +
                 coord_cartesian(xlim = xrng, ylim = yrng) +
                 geom_density2d() + 
                 facet_wrap("tall_var") 
@@ -157,8 +81,8 @@ server_plot_type = function(input,
             cm = get_curr_col()
             p = stsPlotSummaryProfiles(DATA()$profile_dt[id %in% in_view_id, ],
                                        DATA()$tsne_dt[id %in% in_view_id, ], 
-                                       q_tall_vars = input$selCells,
-                                       q_wide_vars = input$selMarks,
+                                       q_tall_vars = input$selTallVars,
+                                       q_wide_vars = input$selWideVars,
                                        x_points = input$numBins,
                                        xrng = xrng,
                                        yrng = yrng,
@@ -171,8 +95,8 @@ server_plot_type = function(input,
             cm = get_curr_col()
             p = stsPlotSummaryProfiles(DATA()$profile_dt[id %in% in_view_id, ], 
                                        DATA()$tsne_dt[id %in% in_view_id, ], 
-                                       q_tall_vars = input$selCells,
-                                       q_wide_vars = input$selMarks,
+                                       q_tall_vars = input$selTallVars,
+                                       q_wide_vars = input$selWideVars,
                                        x_points = input$numBins, 
                                        xrng = xrng,
                                        yrng = yrng,
@@ -193,7 +117,7 @@ server_plot_type = function(input,
     
     observe({
         req(UI_TALLV())
-        req(input$selCells)
+        req(input$selTallVars)
         if(length(UI_TALLV()) == 1){
             # showNotification("hide it")
             shinyjs::hide("app-tall-sel")
@@ -201,20 +125,20 @@ server_plot_type = function(input,
     })
     
     
-    output$ui_global_cells = renderUI({
+    output$ui_global_facet_top = renderUI({
         req(UI_TALLV())
         checkboxGroupInput(
-            "selCells",
+            "selTallVars",
             "Select Aspect",
             choices = UI_TALLV(),
             selected = UI_TALLV()
         )
     })
     
-    output$ui_global_marks = renderUI({
+    output$ui_global_facet_bot = renderUI({
         req(UI_WIDEV())
         checkboxGroupInput(
-            "selMarks",
+            "selWideVars",
             "Select Variables",
             choices = UI_WIDEV(),
             selected = UI_WIDEV()[1]

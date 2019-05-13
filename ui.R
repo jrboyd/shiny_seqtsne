@@ -53,17 +53,18 @@ shinyUI(fluidPage(
                                              )
                                          )
                                      ),
+                                     radioButtons("selFacetType", label = "Facet Type", choices = c("Free", "Cell/Mark", "Mark/Cell"), inline = TRUE),
                                      shinyjs::hidden(
                                          tags$div(id = "app-tall-wide-sel",
                                                   # shinyjs::hidden(
                                                   column(id = "app-tall-sel",
                                                          width = 4,
-                                                         uiOutput("ui_global_cells")
+                                                         uiOutput("ui_global_facet_top")
                                                          # )
                                                   ),
                                                   column(id = "app-wide-sel",
                                                          width = 4,
-                                                         uiOutput("ui_global_marks")
+                                                         uiOutput("ui_global_facet_bot")
                                                   )
                                          )
                                      ),

@@ -184,6 +184,9 @@ profile_dt = res[[1]]
 tsne_dt = res[[2]]
 query_gr = res[[3]]
 agg_dt = res[[4]]
+agg_dt = profile_dt[ x > -.15 & x < .15, .(value = max(y)), .(id, wide_var, tall_var)]
+agg_dt = merge(agg_dt, tsne_dt[, .(tx, ty, id)], by = c("id"))
+
 overlap_dt = res[[5]]
 annotation_dt = res[[6]]
 config_dt = res[[7]]
