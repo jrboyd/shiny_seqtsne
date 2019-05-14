@@ -124,11 +124,13 @@ if(FALSE){
                 })    
 }
 
+# browser()
 
 profile_dt = res[[1]]
 tsne_dt = res[[2]]
 query_gr = res[[3]]
 agg_dt = res[[4]]
+agg_dt[, value := y]
 # overlap_dt = res[[5]]
 annotation_dt = res[[6]]
 config_dt = res[[7]]
