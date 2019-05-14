@@ -5,8 +5,8 @@ library(GenomicRanges)
 library(cowplot)
 bfc = BiocFileCache::BiocFileCache()
 
-rname = "hESC_CD34_seqtsne_wide_biv_full"
-
+# rname = "hESC_CD34_seqtsne_wide_biv_full"
+rname = "waldron_tsne_wide"
 res = bfcif(bfc,
             force_overwrite = FALSE,
             rname, function(){

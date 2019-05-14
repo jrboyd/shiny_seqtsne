@@ -64,6 +64,8 @@ D_MSC_TIME2 = "MSC timecourse full gene-based"
 D_MSC_TIME3 = "MSC timecourse histone gene-based"
 D_MSC_TIME4 = "MSC timecourse bivalency gene-based"
 D_WALDRON_CONSENSUS = "Waldron hESC+CD34 consensus"
+D_KASUMI_AML = "Kasumi AML and AML-ETO sites 5kb"
+D_KASUMI_AML_600 = "Kasumi AML and AML-ETO sites 600b"
 UI_DATASETS = c(
     D_EXAMPLE,
     D_WALDRON_CONSENSUS,
@@ -72,7 +74,9 @@ UI_DATASETS = c(
     D_MSC_TIME,
     D_MSC_TIME2,
     D_MSC_TIME3,
-    D_MSC_TIME4
+    D_MSC_TIME4,
+    D_KASUMI_AML,
+    D_KASUMI_AML_600
 )
 data_dir = getwd()
 UI_DATASOURCES = c(file.path(data_dir, "dataset_scripts/generate_example.R"),
@@ -82,7 +86,9 @@ UI_DATASOURCES = c(file.path(data_dir, "dataset_scripts/generate_example.R"),
                    file.path(data_dir, "dataset_scripts/generate_data_MSC_biv_wide_full.R"),
                    file.path(data_dir, "dataset_scripts/generate_data_MSC_full_gene_driven.R"),
                    file.path(data_dir, "dataset_scripts/generate_data_MSC_histones_gene_driven.R"),
-                   file.path(data_dir, "dataset_scripts/generate_data_MSC_biv_gene_driven.R"))
+                   file.path(data_dir, "dataset_scripts/generate_data_MSC_biv_gene_driven.R"),
+                   file.path(data_dir, "dataset_scripts/generate_data_Kasumi_AML_driven.R"),
+                   file.path(data_dir, "dataset_scripts/generate_data_Kasumi_AML_driven_600.R"))
 stopifnot(file.exists(UI_DATASOURCES))
 names(UI_DATASOURCES)= UI_DATASETS
 
