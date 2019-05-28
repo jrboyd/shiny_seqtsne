@@ -77,14 +77,6 @@ shinyServer(function(input, output, session) {
         )
     })
     
-    output$genePlot <- renderPlot({
-        plot_velocity_arrows_selected(DATA()$tsne_dt,
-                                      DATA()$query_gr,
-                                      input$selCells,
-                                      tss_ids = input$selGenes) +
-            coord_fixed() + theme_classic() + labs(x = "", y = "")
-    })
-    
     sel_zoom_xrng = reactiveVal(c(-.5, .5))
     sel_zoom_yrng = reactiveVal(c(-.5, .5))
     
@@ -140,7 +132,6 @@ shinyServer(function(input, output, session) {
     
     output$detailPlot = renderPlot({
         req(input$n_detail)
-        req(input$selMarksDetail)
         req(input$selCellsDetail)
         req(input$detail_file_type)
         n_detail = input$n_detail
@@ -192,6 +183,7 @@ shinyServer(function(input, output, session) {
                                    
                                    
                                    prof_dt$id = factor(prof_dt$id, levels = samp_id)
+                                   prof_dt = prof_dt[, .(y = sum(y)), by = .(x, id, wide_var, cell, mark, strand)]
                                    ggplot(prof_dt, aes(
                                        x = x,
                                        y = y,
@@ -219,7 +211,7 @@ shinyServer(function(input, output, session) {
                                        skip_checks = TRUE
                                    )$bw_dt    
                                    
-                                   
+                                   prof_dt = prof_dt[, .(y = sum(y)), by = .(x, id, wide_var, cell, mark, strand)]
                                    prof_dt$id = factor(prof_dt$id, levels = samp_id)
                                    ggplot(prof_dt, aes(
                                        x = x,
@@ -375,12 +367,14 @@ shinyServer(function(input, output, session) {
                                                 qmet = "summary",
                                                 # qwin = 50, 
                                                 qwin = 100,
+                                                high_on_right = FALSE,
                                                 # qwin = round(view_size / 100),
                                                 skip_checks = TRUE)$bw_dt    
                 }
-                
+                # browser()
                 prof_dt$id = factor(prof_dt$id, levels = samp_id)
-                p = ggplot(prof_dt, aes(x = x, y = y, color = wide_var, group = paste(id, cell, mark, strand))) +
+                prof_dt = prof_dt[, .(y = mean(y)), by = .(x, id, wide_var, cell, mark)]
+                p = ggplot(prof_dt, aes(x = x, y = y, color = wide_var, group = paste(id, cell, mark))) +
                     geom_path() +
                     scale_color_manual(values = custom_colors$get_curr_col()) + 
                     facet_grid("cell~id") +
@@ -397,6 +391,7 @@ shinyServer(function(input, output, session) {
                                                 qgr = qgr, 
                                                 qmet = "summary",
                                                 qwin = 100,
+                                                high_on_right = FALSE,
                                                 # qwin = round(view_size / 100),
                                                 skip_checks = TRUE)$bw_dt    
                 }

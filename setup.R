@@ -57,7 +57,8 @@ options(mc.cores = 16)
 message(getwd())
 
 D_EXAMPLE = "example"
-D_HESC_CD34 = "hESC and CD34 bivalency"
+D_HESC = "Waldron hESC (fig2)"
+D_HESC_CD34 = "Waldron classic"
 D_BCELL = "B cell bivalency"
 D_MSC_TIME = "MSC timecourse bivalency peak-based"
 D_MSC_TIME2 = "MSC timecourse full gene-based"
@@ -68,6 +69,7 @@ D_KASUMI_AML = "Kasumi AML and AML-ETO sites 5kb"
 D_KASUMI_AML_600 = "Kasumi AML and AML-ETO sites 600b"
 UI_DATASETS = c(
     D_EXAMPLE,
+    D_HESC,
     D_WALDRON_CONSENSUS,
     D_HESC_CD34,
     D_BCELL,
@@ -80,6 +82,7 @@ UI_DATASETS = c(
 )
 data_dir = getwd()
 UI_DATASOURCES = c(file.path(data_dir, "dataset_scripts/generate_example.R"),
+                   file.path(data_dir, "dataset_scripts/generate_waldron_hESC.R"),
                    file.path(data_dir, "dataset_scripts/generate_data_hESC_and_CD34_consensus.R"),
                    file.path(data_dir, "dataset_scripts/generate_data_hESC_and_CD34_biv_wide_full.R"),
                    file.path(data_dir, "dataset_scripts/generate_data_Bcell_biv_wide_full.R"),
@@ -130,6 +133,12 @@ GLOBAL_VIEW_DENSITY = "density"
 
 load_dataset = function(src){
     source(src)
+    if(is.null(profile_dt$cell)){
+        profile_dt[, cell := tall_var]
+    }
+    if(is.null(profile_dt$mark)){
+        profile_dt[, mark := wide_var]
+    }
     .cells = unique(profile_dt$cell)
     .marks = unique(profile_dt$mark)
     .wide_vars = unique(profile_dt$wide_var)

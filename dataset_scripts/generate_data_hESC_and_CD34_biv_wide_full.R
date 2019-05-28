@@ -131,6 +131,7 @@ tsne_dt = res[[2]]
 query_gr = res[[3]]
 agg_dt = res[[4]]
 agg_dt[, value := y]
+agg_dt = merge(agg_dt, tsne_dt[, .(id, tx, ty)], by = "id")
 # overlap_dt = res[[5]]
 annotation_dt = res[[6]]
 config_dt = res[[7]]
