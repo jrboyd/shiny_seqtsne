@@ -58,7 +58,8 @@ message(getwd())
 
 D_EXAMPLE = "example"
 D_HESC = "Waldron hESC (fig2)"
-D_HESC_CD34 = "Waldron classic"
+D_HESC_wCD34 = "Waldron hESC wCD34 (fig3)"
+D_HESC_CLASSIC = "Waldron classic"
 D_BCELL = "B cell bivalency"
 D_MSC_TIME = "MSC timecourse bivalency peak-based"
 D_MSC_TIME2 = "MSC timecourse full gene-based"
@@ -70,8 +71,9 @@ D_KASUMI_AML_600 = "Kasumi AML and AML-ETO sites 600b"
 UI_DATASETS = c(
     D_EXAMPLE,
     D_HESC,
+    D_HESC_wCD34,
     D_WALDRON_CONSENSUS,
-    D_HESC_CD34,
+    D_HESC_CLASSIC,
     D_BCELL,
     D_MSC_TIME,
     D_MSC_TIME2,
@@ -83,6 +85,7 @@ UI_DATASETS = c(
 data_dir = getwd()
 UI_DATASOURCES = c(file.path(data_dir, "dataset_scripts/generate_example.R"),
                    file.path(data_dir, "dataset_scripts/generate_waldron_hESC.R"),
+                   file.path(data_dir, "dataset_scripts/generate_waldron_hESC_wCD34.R"),
                    file.path(data_dir, "dataset_scripts/generate_data_hESC_and_CD34_consensus.R"),
                    file.path(data_dir, "dataset_scripts/generate_data_hESC_and_CD34_biv_wide_full.R"),
                    file.path(data_dir, "dataset_scripts/generate_data_Bcell_biv_wide_full.R"),
